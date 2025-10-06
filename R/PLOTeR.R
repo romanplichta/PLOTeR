@@ -37,7 +37,7 @@
 #' @import DT
 #' @importFrom shinyWidgets switchInput dropMenu dropdownButton materialSwitch updateMaterialSwitch
 #' @import shinyjqui
-#' @import shinyTime
+#' @importFrom shinyTime timeInput
 #' @importFrom shinyjs hide useShinyjs hidden delay
 #' @import reshape2
 #' @import rlang

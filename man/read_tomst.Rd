@@ -4,12 +4,23 @@
 \alias{read_tomst}
 \title{read_tomst}
 \usage{
-read_tomst(file, radius_units = c("auto", "um", "tomst"), delim)
+read_tomst(
+  file,
+  radius_units = c("auto", "um", "tomst"),
+  interval = c("Auto", "1 min", "5 min", "15 min", "1 hour"),
+  TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B", "Sandy_Loam_A", "Sandy_Loam_B",
+    "Loam", "Sil_Loam", "Peat", "Sand"),
+  delim
+)
 }
 \arguments{
 \item{file}{If NULL, all csv files from working directory with name structure "data_8digitserialnumber_*.csv" are loaded. Alternatively a vector of names could be provided.}
 
 \item{radius_units}{The dendrometers' radius units used when downloaded from Tomst software. Use "auto" to convert units into micrometers automatically (default). Use either "tomst" or "um" to convert manually. Explicitly, if data were downloaded from Tomst software in micrometers, use "um", and if data were downloaded in Tomst units, use "tomst". This function is always trying to convert data into micrometers.If data lower than 1270 together with "tomst" units are found, warning message come up.The conversion formula is as follows: micrometers = (tomst-1278)*(8890/(34000-1278))}
+
+\item{interval}{Parameter used to fill in missing data_stamps on desired interval. 'Auto' detects the interval automatically. If multiple interval are detected, the shortest one is used. Note that the '.id' and 'date_time' columns are filled in; other columns will contain NA.}
+
+\item{TMS_calibration}{Recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com 06.10.2025)}
 }
 \value{
 Data.frame with long type of data.
