@@ -7,6 +7,8 @@
 #'
 #' @param file If NULL, all csv files from working directory with name structure "data_8digitserialnumber_*.csv" are loaded. Alternatively a vector of names could be provided.
 #' @param radius_units The dendrometers' radius units used when downloaded from Tomst software. Use "auto" to convert units into micrometers automatically (default). Use either "tomst" or "um" to convert manually. Explicitly, if data were downloaded from Tomst software in micrometers, use "um", and if data were downloaded in Tomst units, use "tomst". This function is always trying to convert data into micrometers.If data lower than 1270 together with "tomst" units are found, warning message come up.The conversion formula is as follows: micrometers = (tomst-1278)*(8890/(34000-1278))
+#' @param interval Parameter used to fill in missing data_stamps on desired interval. 'Auto' detects the interval automatically. If multiple interval are detected, the shortest one is used. Note that the '.id' and 'date_time' columns are filled in; other columns will contain NA.
+#' @param TMS_calibration Recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com [06.10.2025])
 #'
 #' @return Data.frame with long type of data.
 #'
