@@ -39,7 +39,7 @@
 #' @import png
 #'
 #' @export
-read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval = c("Auto","1 min", "5 min", "15 min", "1 hour"), delim){
+read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval = c("Auto","1 min", "5 min", "15 min", "1 hour"), TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand"), delim){
   if(missing(file)){
     files = vector()
     files <- list.files(pattern=glob2rx("data*.csv$"))
@@ -115,15 +115,29 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
         stop("Wrong units. Use 'auto', 'tomst' or 'um'")
       }
       df$Moisture = ifelse(df$.id >= 93000000 | df$.id %in% c(90181123, 91181123), df$Moisture, NA)
-      # #loamy_sand_A
-      df$Moisture = (-1.90e-8*df$Moisture^2+2.66e-4*df$Moisture-1.54e-1)*100
+      # Soil type calibration lines----
+      # Soil type start
+      tms_calib_data = list('Loamy_Sand_A' = matrix(data = c(-1.90e-8, 2.66e-4, -1.54e-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_A"), c("a", "b", "c"))),
+                            'Loamy_Sand_B' = matrix(data = c(-2.30E-8, 2.82E-4, -1.67E-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_B"), c("a", "b", "c"))),
+                            'Sandy_Loam_A' = matrix(data = c(-3.80E-8, 3.39E-4, -2.15E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_A"), c("a", "b", "c"))),
+                            'Sandy_Loam_B' = matrix(data = c(-9.00E-10, 2.62E-4, -1.59E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_B"), c("a", "b", "c"))),
+                            'Loam' = matrix(data = c(-5.10E-8, 3.98E-4, -2.91E-1), nrow = 1, ncol = 3, dimnames = list(c("Loam"), c("a", "b", "c"))),
+                            'Sil_Loam' = matrix(data = c(1.70E-8, 1.18E-4, -1.01E-1), nrow = 1, ncol = 3, dimnames = list(c("Sil_Loam"), c("a", "b", "c"))),
+                            'Peat' = matrix(data = c(1.23E-7, -1.45E-4, 2.03E-1), nrow = 1, ncol = 3, dimnames = list(c("Peat"), c("a", "b", "c"))),
+                            'Sand' = matrix(data = c(-3.00E-9, 1.61E-4, -1.10E-1), nrow = 1, ncol = 3, dimnames = list(c("Sand"), c("a", "b", "c"))))
+      if(any(TMS_calibration %in% c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand"))){
+        df$Moisture = (tms_calib_data[[TMS_calibration[1]]][1]*df$Moisture^2+tms_calib_data[[TMS_calibration[1]]][1]*df$Moisture+tms_calib_data[[TMS_calibration[1]]][1])*100
+      }else{
+        stop("TMS_calibration. Use 'Loamy_Sand_A', 'Loamy_Sand_B','Sandy_Loam_A','Sandy_Loam_B','Loam','Sil_Loam', 'Peat', 'Sand'.")
+      }
+      # Soil type end
       df$T1 = as.numeric(df$T1)
       df$T2 = as.numeric(ifelse(df$.id >= 93000000, df$T2, NA))
       df$T3 = as.numeric(ifelse(df$.id >= 93000000, df$T3, NA))
       df = df %>% mutate(orig_radius_units = as.character(if_else(.id >= 93000000, NA,if_else(orig_radius_units == "205","tomst",if_else(orig_radius_units == "206", "um", orig_radius_units)))))
       df$.id = as.factor(df$.id)
       df = droplevels(df)
-      # defined measurement interval. This fnct will add lines in selected interval to complete missing data-stamps
+      # Measurement interval. This fnct will add lines in selected interval to complete missing data-stamps----
       # interval start
       if(any(interval %in% c('auto', '1 min', '5 min', '15 min', '1 hour'))){
         if(interval[1] == "auto"){
@@ -140,9 +154,7 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
             stop("Wrong interval. Unable to detect interval. Please, check your data.")
           }else{
             df = df %>% dplyr::group_by(.id) %>%
-              # left_join(resol, by = ".id") %>%
               tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=as.difftime(resol$time_diff[1], units = "mins"),tz = 'UTC')) %>%
-              # select(-time_diff) %>%
               dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
             rm(resol)
           }
@@ -157,6 +169,8 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
       }
       # interval end
       df = df %>% select(where(~!all(is.na(.x)))) %>% as.data.frame()
+      # Radius units lines----
+      # Radius units start
       if(any(colnames(df) %in% "Radius")){
         if(radius_units[1] == "auto"){
           if(all(df$orig_radius_units %in% c("tomst", "um", NA))){
@@ -185,12 +199,9 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
           }
       }
       }
+      # Radius units end
       return(df)
     }
   }
 }
-
-
-
-
 
