@@ -3991,9 +3991,7 @@ observe({
                   dplyr::summarise(time_diff_per = (per/tot)*100) %>%
                   dplyr:: filter(time_diff_per == max(time_diff_per, na.rm = T)) %>% select(-time_diff_per) %>% as.data.frame
                 df = df %>% group_by(.id) %>%
-                  left_join(resol, by = ".id") %>%
-                  tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=as.difftime(unique(time_diff), units = "mins") ,tz = 'UTC')) %>%
-                  select(-time_diff) %>%
+                  tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=as.difftime(resol$time_diff[1], units = "mins") ,tz = 'UTC')) %>%
                   dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
                 rm(resol)
               } else {
