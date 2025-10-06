@@ -39,7 +39,7 @@
 #' @import png
 #'
 #' @export
-read_tomst = function (file, radius_units  = c("auto","um", "tomst"), delim){
+read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval = c("Auto","1 min", "5 min", "15 min", "1 hour"), delim){
   if(missing(file)){
     files = vector()
     files <- list.files(pattern=glob2rx("data*.csv$"))
@@ -123,7 +123,39 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), delim){
       df = df %>% mutate(orig_radius_units = as.character(if_else(.id >= 93000000, NA,if_else(orig_radius_units == "205","tomst",if_else(orig_radius_units == "206", "um", orig_radius_units)))))
       df$.id = as.factor(df$.id)
       df = droplevels(df)
-      df = df %>% group_by(.id) %>% tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by="15 min",tz = 'UTC')) %>% dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
+      # defined measurement interval. This fnct will add lines in selected interval to complete missing data-stamps
+      # interval start
+      if(any(interval %in% c('auto', '1 min', '5 min', '15 min', '1 hour'))){
+        if(interval[1] == "auto"){
+          resol = df %>% dplyr::select(.id, date_time) %>% dplyr::group_by(.id) %>%
+            dplyr::mutate(time_diff = difftime(date_time, lag(date_time), units = "mins") ) %>%
+            filter(!is.na(time_diff)) %>%
+            dplyr::mutate(tot = n()) %>%
+            dplyr::group_by(time_diff, .add = T) %>%
+            dplyr::mutate(per = n()) %>%
+            dplyr::distinct(.id, time_diff, .keep_all = T) %>%
+            dplyr::summarise(time_diff_per = (per/tot)*100) %>%
+            dplyr:: filter(time_diff_per == max(time_diff_per, na.rm = T)) %>% select(-time_diff_per) %>% as.data.frame
+          if(is.na(resol$time_diff[1])|is.null(resol$time_diff[1])){
+            stop("Wrong interval. Unable to detect interval. Please, check your data.")
+          }else{
+            df = df %>% dplyr::group_by(.id) %>%
+              # left_join(resol, by = ".id") %>%
+              tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=as.difftime(resol$time_diff[1], units = "mins"),tz = 'UTC')) %>%
+              # select(-time_diff) %>%
+              dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
+            rm(resol)
+          }
+        }
+        else{
+          df = df %>% group_by(.id) %>%
+            tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=interval ,tz = 'UTC')) %>%
+            dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
+        }
+      }else{
+        stop("Wrong interval. Use 'auto', '1 min', '5 min', '15 min', '1 hour'")
+      }
+      # interval end
       df = df %>% select(where(~!all(is.na(.x)))) %>% as.data.frame()
       if(any(colnames(df) %in% "Radius")){
         if(radius_units[1] == "auto"){
@@ -157,3 +189,8 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), delim){
     }
   }
 }
+
+
+
+
+
