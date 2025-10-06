@@ -15,3 +15,5 @@ Depends:
 LazyData: true
 Suggests: 
     shinytest2
+URL: https://github.com/romanplichta/PLOTeR
+BugReports: https://github.com/romanplichta/PLOTeR/issues
