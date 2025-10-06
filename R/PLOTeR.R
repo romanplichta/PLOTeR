@@ -3,7 +3,7 @@
 #' @format A default dataset includes:
 #' \describe{
 #'   \item{.id}{device serial number}
-#'   \item{Index_level}{INdex of manipulated data}
+#'   \item{Index_level}{Index of manipulated data}
 #'   \item{Moisture}{moisture data in percentage}
 #'   \item{Radius}{radius data in micrometers}
 #'   \item{T1}{Temperature 1 of TMS sensors}
