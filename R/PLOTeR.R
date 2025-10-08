@@ -23,29 +23,17 @@
 #' @examples
 #' PLOTeR()
 #'
-#' @import readr
-#' @import utils
-#' @import ggplot2
+#' @rawNamespace import(shiny, except = c(dataTableOutput,renderDataTable, runExample))
+#' @import readr utils ggplot2 dplyr lubridate tidyr dbscan DT shinyjqui reshape2 rlang tibble png
 #' @importFrom plyr ldply
 #' @importFrom zoo na.approx na.locf rollsum
-#' @import dplyr
-#' @import lubridate
-#' @import tidyr
-#' @import dbscan
 #' @importFrom stats complete.cases sd na.omit median quantile
-#' @rawNamespace import(shiny, except = c(dataTableOutput,renderDataTable, runExample))
-#' @import DT
 #' @importFrom shinyWidgets switchInput dropMenu dropdownButton materialSwitch updateMaterialSwitch
-#' @import shinyjqui
 #' @importFrom shinyTime timeInput
 #' @importFrom shinyjs hide useShinyjs hidden delay
-#' @import reshape2
-#' @import rlang
-#' @import tibble
 #' @importFrom gridExtra grid.arrange
 #' @importFrom grid grid.newpage grid.draw
 #' @importFrom cowplot get_legend get_plot_component
-#' @import png
 #'
 #' @export
 PLOTeR = function (){
@@ -219,7 +207,7 @@ PLOTeR = function (){
                                                                       column(12,downloadButton("bar2","Export data", style = "width:100%;"))
                                                                     ),
                                                                     fluidRow(
-                                                                      column(12,downloadButton("go", "Export plot", style = "width:100%;"))
+                                                                      column(12,downloadButton("export_plot_btn", "Export plot", style = "width:100%;"))
                                                                     )
                                                  )),
                                                  div(style = "width: 5px;"),
@@ -235,7 +223,6 @@ PLOTeR = function (){
                                                                                        column(7,conditionalPanel(condition = "input.legend_switch == true",
                                                                                                                  uiOutput(outputId = 'legend_val')))),
                                                                                      shinyWidgets::materialSwitch("one_by_one_switch","Show all", status = "primary", value = F,right = T),
-                                                                                     column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
                                                                                      br(),
                                                                                      shinyWidgets::materialSwitch("cleaner_mode_switch",HTML(paste0("Cleaning mode",tags$sup("beta"))), status = "primary", value = F, right = T)
                                                                               )
@@ -1483,7 +1470,7 @@ PLOTeR = function (){
           }}+
             coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
             theme_bw()+
-            guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            # guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
             theme(legend.position = "top")+
             ylab(label = input$variable_prim)
         } else {
@@ -1494,7 +1481,7 @@ PLOTeR = function (){
                 else{geom_smooth(aes(colour = .data[[input$Groupby_upper_plot]]),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}}}+
             coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
             theme_bw()+
-            guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            # guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
             theme(legend.position = "top")}
       }
     plot_lower_plot = function() {
@@ -2395,10 +2382,10 @@ observe({
       legend_appear_2()
       #plot_zooming()
     })
-    output$go <- downloadHandler(
-      filename = function (){"Shinyplot.tif"},
+    output$export_plot_btn <- downloadHandler(
+      filename = function (){"Shinyplot.png"},
       content = function(file) {
-        ggsave(file, plot_export_funct(), device = "tiff" ,width = 45, height = height_funct(), units = "cm", dpi = 300, compression = "lzw")
+        ggplot2::ggsave(file, plot_export_funct(), device = "png" ,width = 45, height = height_funct(), units = "cm", dpi = 300, bg = "white")
       })
     #Data_manipulation ----
     data_export_funct = function(){
