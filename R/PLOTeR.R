@@ -234,12 +234,12 @@ PLOTeR = function (){
                                                                          column(5,shinyWidgets::materialSwitch("legend_switch","Legend", status = "primary", right = T, value = T)),
                                                                          column(7,conditionalPanel(condition = "input.legend_switch == true",
                                                                                                    uiOutput(outputId = 'legend_val')))),
-                                                                       shinyWidgets::materialSwitch("group_switch","Group", status = "primary", right = T),
-                                                                       conditionalPanel(condition = "input.group_switch == true",
-                                                                                        selectInput("Groupby", NULL,""),
-                                                                                        selectInput("method", "Method",c("auto", "lm", "glm", "gam", "mean"),
+                                                                       shinyWidgets::materialSwitch("group_switch_upper_plot","Group", status = "primary", right = T),
+                                                                       conditionalPanel(condition = "input.group_switch_upper_plot == true",
+                                                                                        selectInput("Groupby_upper_plot", NULL,""),
+                                                                                        selectInput("method_upper_plot", "Method",c("auto", "lm", "glm", "gam", "mean"),
                                                                                                     selected = "auto"),
-                                                                                        shinyWidgets::materialSwitch("se_switch","SE",value = T, status = "info", width = "50%"),
+                                                                                        shinyWidgets::materialSwitch("se_switch_upper_plot","SE",value = T, status = "info", width = "50%"),
                                                                                         shinyWidgets::materialSwitch("regre_switch",HTML(paste0("Regression",tags$sup("beta"))), status = "info")
                                                                        ),
                                                                        shinyWidgets::materialSwitch("one_by_one_switch","Show all", status = "primary", value = F,right = T),
@@ -274,14 +274,15 @@ PLOTeR = function (){
                                                                     circle = FALSE,
                                                                     icon = icon("cog", lib = "glyphicon"),
                                                                     fluidRow(
-                                                                      column(12,
-                                                                             shinyWidgets::materialSwitch("lower_plot_switch","Lower plot"),
-                                                                             # shinyWidgets::materialSwitch("group_switch2","Group", status = "primary"),
-                                                                             conditionalPanel(condition = "input.group_switch2 == true",
-                                                                                              selectInput("Groupby2", NULL,""),
-                                                                                              selectInput("method2", "Method",c("auto", "lm", "glm", "gam"),
+                                                                      # change8 ----
+                                                                      column(12,align="left",
+                                                                             shinyWidgets::materialSwitch("lower_plot_switch","Lower plot", status = "primary",),
+                                                                             shinyWidgets::materialSwitch("group_switch_lower_plot","Group", status = "primary"),
+                                                                             conditionalPanel(condition = "input.group_switch_lower_plot == true",
+                                                                                              selectInput("Groupby_lower_plot", NULL,""),
+                                                                                              selectInput("method_lower_plot", "Method",c("auto", "lm", "glm", "gam", "mean"),
                                                                                                           selected = "auto"),
-                                                                                              shinyWidgets::materialSwitch("se_switch2","SE",value = T, status = "info", width = "50%")
+                                                                                              shinyWidgets::materialSwitch("se_switch_lower_plot","SE",value = T, status = "info", width = "50%")
                                                                              )
                                                                       )
                                                                     )))
@@ -650,15 +651,14 @@ PLOTeR = function (){
     #dynamic input for grouping
     #axis choices removing columns including only NA
     f2 <- reactive({
-      colnames(Filter(is.factor, d$a))
-
+      c("none",colnames(Filter(is.factor, d$a)))
     })
     observe({
-      updateSelectInput(session, "Groupby",
+      updateSelectInput(session, "Groupby_upper_plot",
                         choices = f2())
     })
     observe({
-      updateSelectInput(session, "Groupby2",
+      updateSelectInput(session, "Groupby_lower_plot",
                         choices = f2())
     })
     #input for one_by_one select
@@ -1410,7 +1410,7 @@ PLOTeR = function (){
         }
       }
     }) %>% debounce(1000)
-    plot_prim_axis_1 = function() {
+    plot_data_plot = function() {
       c = d$a
       sel = input$table_rows_selected
       dat3 = c[sel,]
@@ -1422,7 +1422,7 @@ PLOTeR = function (){
         guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
         theme(legend.position = "top")
     }
-    plot_prim_axis_2_data = reactive({
+    plot_plot_data = reactive({
       req(!is.null(d$a))
       if(isFALSE(input$one_by_one_switch)){
         c = d$a
@@ -1442,68 +1442,83 @@ PLOTeR = function (){
           }
         }
       }
-      if(input$method == "mean") {
-        c = as.data.frame(c %>% group_by(!!rlang::sym(input$Groupby),date_time) %>% summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))))
-      }
+      # if(input$method_upper_plot == "mean") {
+      #   c = as.data.frame(c %>% group_by(!!rlang::sym(input$Groupby_upper_plot),date_time) %>% summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))))
+      # }
       return(c)
     })
     # %>% debounce(1000)
-    plot_prim_axis_2 = function() {
-      rows = input$legend_value
-      if(input$method == "mean") {
-        ggplot(data = plot_prim_axis_2_data(), aes_string(x="date_time", y="data_mean", colour=input$Groupby,fill=input$Groupby))+
-          geom_line()+
-          {if(isTRUE(input$se_switch)){
-            geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}+
-          coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
-          theme_bw()+
-          guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
-          theme(legend.position = "top")+
-          ylab(label = input$variable_prim)
-      } else {
-        ggplot(data = plot_prim_axis_2_data(), aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
-          {if(isFALSE(input$group_switch)){geom_line()
-          }else {
-            geom_smooth(aes_string(colour = input$Groupby),method = input$method, se=input$se_switch)}}+
-          {if(isTRUE(input$anomalies_switch & input$variable_prim == "Radius")){
-            geom_point(aes_string(y="cluster_zero"), fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)}}+
-          #geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
-          coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
-          theme_bw()+
-          guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
-          theme(legend.position = "top")}
-    }
-    plot_prim_axis_3 = function() {
-      if(isFALSE(input$one_by_one_switch)){
-        c = d$a
-        c = c%>% filter(.id %in% input$one_by_one_group_select)
-      } else {
-        c = d$a
+    plot_upper_plot = function(){
+        rows = input$legend_value
+        if(input$method_upper_plot == "mean") {
+          {if(input$Groupby_upper_plot == "none"){ggplot(data = plot_plot_data() %>%
+                                                           group_by(date_time) %>%
+                                                           summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
+                                                           as.data.frame(),
+                                                         aes(x=.data[["date_time"]], y=.data[["data_mean"]]))+
+              geom_line(colour = "#3366FF")+
+              {if(isTRUE(input$se_switch_upper_plot)){
+                geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
+          }else{ggplot(data = plot_plot_data() %>%
+                         group_by(!!rlang::sym(input$Groupby_upper_plot),date_time) %>%
+                         summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
+                         as.data.frame(),
+                       aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$input$Groupby_upper_plot]], fill = .data[[input$input$Groupby_upper_plot]]))+
+              geom_line()+
+              {if(isTRUE(input$se_switch_upper_plot)){
+                geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
+          }}+
+            coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
+            theme_bw()+
+            guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            theme(legend.position = "top")+
+            ylab(label = input$variable_prim)
+        } else {
+          ggplot(data = plot_plot_data(), aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
+            {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes(colour=.data[[".id"]]))
+            }else {
+              {if(input$Groupby_upper_plot == "none"){geom_smooth(method = input$method_upper_plot, se=input$se_switch_upper_plot)}
+                else{geom_smooth(aes(colour = .data[[input$Groupby_upper_plot]]),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}}}+
+            coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
+            theme_bw()+
+            guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            theme(legend.position = "top")}
       }
-      #sel = input$table_rows_selected
-      #dat3 = c[sel,]
-      rows = ceiling(length(levels(droplevels(c$.id)))/18)
-      if(input$method == "mean") {
-        c = as.data.frame(c %>% group_by(!!rlang::sym(input$Groupby),date_time) %>% summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))))
-        ggplot(data = c, aes_string(x="date_time", y="data_mean", colour=input$Groupby,fill=input$Groupby))+
-          geom_line()+
-          {if(isTRUE(input$se_switch)){
-            geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}+
+    plot_lower_plot = function() {
+      if(input$method_lower_plot == "mean") {
+        {if(input$Groupby_lower_plot == "none"){ggplot(data = plot_plot_data() %>%
+                       group_by(date_time) %>%
+                       summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
+                       as.data.frame(),
+                     aes(x=.data[["date_time"]], y=.data[["data_mean"]]))+
+            geom_line(colour = "#3366FF")+
+            {if(isTRUE(input$se_switch_lower_plot)){
+              geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
+            }else{ggplot(data = plot_plot_data() %>%
+                        group_by(!!rlang::sym(input$Groupby_lower_plot),date_time) %>%
+                        summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
+                        as.data.frame(),
+                      aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$input$Groupby_lower_plot]], fill = .data[[input$input$Groupby_lower_plot]]))+
+                geom_line()+
+                {if(isTRUE(input$se_switch_lower_plot)){
+                  geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
+                }}+
           coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
           theme_bw()+
-          guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
-          theme(legend.position = "top")+
+          # guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+          theme(legend.position = "none")+
           ylab(label = input$variable_prim)
       } else {
-        ggplot(data = c, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
-          {if(isFALSE(input$group_switch)){geom_line()
+        ggplot(data = plot_plot_data(), aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
+          {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes(colour=.data[[".id"]]))
           }else {
-            geom_smooth(aes_string(colour = input$Groupby),method = input$method, se=input$se_switch)}}+
+            {if(input$Groupby_lower_plot == "none"){geom_smooth(method = input$method_lower_plot, se=input$se_switch_lower_plot)}
+              else{geom_smooth(aes(colour = .data[[input$Groupby_lower_plot]]),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}}}+
           #geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
           coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
           theme_bw()+
-          guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
-          theme(legend.position = "top")}
+          # guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+          theme(legend.position = "none")}
     }
     plot_sec_axis_1 = function() {
       recal = reactiveValues(avar = (max(d$a[[input$variable_sec]],na.rm = T)-min(d$a[[input$variable_sec]],na.rm = T))/(max(d$a[[input$variable_prim]],na.rm = T)-min(d$a[[input$variable_prim]],na.rm = T)))
@@ -1546,7 +1561,7 @@ PLOTeR = function (){
       }
       if(isTRUE(input$regre_switch) & !is.na(input$variable_sec)){
         dat2 = as.data.frame(dat2 %>% dplyr::group_by(.id) %>% dplyr::filter(lubridate::hour(date_time) == 00 & lubridate::minute(date_time) == 00))
-        groups = c("date_time", input$Groupby)
+        groups = c("date_time", input$Groupby_upper_plot)
         dat2 = dat2 %>% dplyr::group_by(across(groups)) %>% dplyr::summarise(meanx = mean(!!rlang::sym(input$variable_prim), na.rm = T), meany = mean(!!rlang::sym(input$variable_sec), na.rm = T)) %>% na.omit() %>%
           plyr::rename(c("meanx" = input$variable_prim, "meany" = input$variable_sec)) %>% as.data.frame()
       }else{
@@ -1579,17 +1594,17 @@ PLOTeR = function (){
       if(isTRUE(input$regre_switch) & !is.na(input$variable_sec)){
         ggplot(data = dat2, aes_string(x=input$variable_prim, y=input$variable_sec))+
           geom_point()+
-          geom_smooth(aes_string(colour = input$Groupby),method = input$method, se=input$se_switch)+
+          geom_smooth(aes_string(colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot)+
           theme_classic()
       } else {
       ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
-        {if(isFALSE(input$group_switch)){geom_line()
+        {if(isFALSE(input$group_switch_upper_plot)){geom_line()
         }else {
-          geom_smooth(aes_string(colour = input$Groupby),method = input$method, se=input$se_switch)}}+
+          geom_smooth(aes_string(colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}+
         # geom_point(data = dat3,fill = "black", size = 3, alpha= 0.6, show.legend = F)+
-        {if(isFALSE(input$group_switch)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
+        {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
         }else {
-          geom_smooth(aes_string(y="sec",colour = input$Groupby),method = input$method, se=input$se_switch, linetype = 2)}}+
+          geom_smooth(aes_string(y="sec",colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot, linetype = 2)}}+
         scale_y_continuous(name = input$variable_prim,sec.axis = sec_axis(~.*recal$avar+recal2$bvar, name = ifelse(isTRUE(input$freeze_switch),paste0(input$method3, " freeze_show"), input$variable_sec)))}+
         coord_cartesian(xlim = zooming$x, ylim = zooming$y,expand = T)+
         theme_bw()+
@@ -1609,13 +1624,13 @@ PLOTeR = function (){
       dat3 = dat2[sel,]
       rows = ceiling(length(levels(droplevels(dat2$.id)))/6)
       ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
-        {if(isFALSE(input$group_switch2)){geom_line()
+        {if(isFALSE(input$group_switch_lower_plot)){geom_line()
         }else {
-          geom_smooth(aes_string(colour = input$Groupby2),method = input$method2, se=input$se_switch2)}}+
+          geom_smooth(aes_string(colour = input$Groupby_lower_plot),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
         geom_point(data = dat3,fill = "black", size = 3, alpha= 0.6, show.legend = F)+
-        {if(isFALSE(input$group_switch2)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
+        {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
         }else {
-          geom_smooth(aes_string(y="sec",colour = input$Groupby2),method = input$method2, se=input$se_switch2)}}+
+          geom_smooth(aes_string(y="sec",colour = input$Groupby_lower_plot),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
         scale_y_continuous(name = input$variable_prim,sec.axis = sec_axis(~.*recal$avar+recal2$bvar, name = input$variable_sec))+
         coord_cartesian(xlim = zooming$x, ylim = zooming$y,expand = T)+
         theme_bw()+
@@ -1989,7 +2004,7 @@ PLOTeR = function (){
       rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
       rect_data = if(is.null(cleaner_mode_rect$data )){data.frame()}else{cleaner_mode_rect$data %>% filter(.id %in% rect_ids) %>% droplevels()}
       rect_data_levelup = if(is.null(cleaner_mode_rect$data_levelup )){data.frame()}else{cleaner_mode_rect$data_levelup %>% filter(.id %in% rect_ids_levelup) %>% droplevels()}
-      ggplot(data = plot_prim_axis_2_data(), aes_string("date_time", input$variable_prim, colour = ".id")) +
+      ggplot(data = plot_plot_data(), aes_string("date_time", input$variable_prim, colour = ".id")) +
         geom_line()+
       # change7----
       # {if(isFALSE(input$fine_mode)){{if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}}
@@ -2231,7 +2246,7 @@ observe({
         empty_plot_1()
       } else {
         if (is.null(input$variable_sec)|isFALSE(input$sec_ax)){
-          plot_prim_axis_1()
+          plot_data_plot()
         } else {
           plot_sec_axis_1()
         }
@@ -2253,7 +2268,7 @@ observe({
                 theme(legend.position = "none")
             }else{
             if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
-              plot_prim_axis_2()+
+              plot_upper_plot()+
                 theme(legend.position = "none")
             } else {
               plot_sec_axis_2()
@@ -2273,7 +2288,7 @@ observe({
                   axis.title.x = element_blank())
         } else {
           if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
-            plot_prim_axis_3()+
+            plot_lower_plot()+
               theme(legend.position = "none")
           } else {
             plot_sec_axis_3()
@@ -2285,8 +2300,8 @@ observe({
       if(is.null(input$.id)|is.null(input$variable_prim)){
         grid.newpage()
       } else {
-        # legend <- cowplot::get_legend(plot_prim_axis_2())
-        legend = cowplot::get_plot_component(plot_prim_axis_2(), 'guide-box-top', return_all = TRUE)
+        # legend <- cowplot::get_legend(plot_upper_plot())
+        legend = cowplot::get_plot_component(plot_upper_plot(), 'guide-box-top', return_all = TRUE)
         grid.newpage()
         grid.draw(legend)
         return(legend)
@@ -3448,7 +3463,7 @@ observe({
         selectInput("bar31", "Freeze method:", choices = c("Raw", "Fine")),
         numericInput("bar32", "Density clustering Minpoints:", min = 3, max = 60, step = 1, value = 20),
         numericInput("bar33", "Minimum temperature method1:", min = -10, max = 10, step = 1, value = 5),
-        numericInput("bar35", "Minimum temperature forced filtered method2:", min = -10, max = 10, step = 1, value = -5),
+        numericInput("bar35", "Minimum temperature forced filtered method_lower_plot:", min = -10, max = 10, step = 1, value = -5),
         numericInput("bar34", "Mean daily temperature with below zero temperature:",  min = -10, max = 10, step = 1, value = 5),
         easyClose = TRUE,
         footer = tagList(
