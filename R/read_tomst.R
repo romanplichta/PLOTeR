@@ -5,10 +5,11 @@
 #'
 #' @details Data are automatically named and converted into default structure.
 #'
-#' @param file If NULL, all csv files from working directory with name structure "data_8digitserialnumber_*.csv" are loaded. Alternatively a vector of names could be provided.
-#' @param radius_units The dendrometers' radius units used when downloaded from Tomst software. Use "auto" to convert units into micrometers automatically (default). Use either "tomst" or "um" to convert manually. Explicitly, if data were downloaded from Tomst software in micrometers, use "um", and if data were downloaded in Tomst units, use "tomst". This function is always trying to convert data into micrometers.If data lower than 1270 together with "tomst" units are found, warning message come up.The conversion formula is as follows: micrometers = (tomst-1278)*(8890/(34000-1278))
-#' @param interval Parameter used to fill in missing data_stamps on desired interval. 'Auto' detects the interval automatically. If multiple interval are detected, the shortest one is used. Note that the '.id' and 'date_time' columns are filled in; other columns will contain NA.
-#' @param TMS_calibration Recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com 06.10.2025)
+#' @param file a character vector of file names; e.g., c("data_92241809_2025_04_04_0.csv", "data_92241809_2025_04_04_1.csv"). If missing, all csv files in the working directory matching the name pattern "data_8digitserialnumber_*.csv" will be loaded.
+#' @param path a character vector of full path name; the default corresponds to the working directory, getwd().
+#' @param radius_units the units of dendrometer radius used when downloading data using Tomst software. Use "auto" to automatically convert radius values into micrometers (default). Use either "tomst" or "um" to convert manually. Specifically, if the data were downloaded from Tomst software in micrometers, use "um", if data were downloaded in Tomst units, use "tomst". This function always attempts to convert data into micrometers.If values lower than 1270 are found together with "tomst" units, warning message will be displayed.The conversion formula from "tomst" units into micrometers is: micrometers = (tomst-1278)*(8890/(34000-1278))
+#' @param interval parameter used to fill in missing data_stamps as the desired interval. "auto" detects the interval automatically. If multiple intervals are automatically detected, the prevailing one is used. Variables will contain NA for the filled in data_stamps. Shorter intervals than the desired one are kept in data.
+#' @param TMS_calibration recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com 06.10.2025). Loamy_Sand_A is used as default.
 #'
 #' @return Data.frame with long type of data.
 #'
@@ -41,16 +42,21 @@
 #' @import png
 #'
 #' @export
-read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval = c("Auto","1 min", "5 min", "15 min", "1 hour"), TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand"), delim){
+read_tomst = function (path, file, radius_units  = c("auto","um", "tomst"), interval = c("auto","1 min", "5 min", "15 min", "1 hour"), TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand"), delim){
+  if(missing(path)){
+    path <- getwd()
+  }
   if(missing(file)){
     files = vector()
-    files <- list.files(pattern=glob2rx("data*.csv$"))
+    files <- list.files(path = path, pattern=glob2rx("data*.csv$"))
   }else{
     files <- file
   }
   if(length(files) == 0){
     stop("Working directory: no file in appropriate format")
   }else{
+    files = paste0(path,"/",files)
+    rm(path)
     TMS = list()
     for(i in files) {
       x <- readr::read_delim(i, delim =";",
@@ -67,7 +73,7 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
       stop("Working directory: no file in appropriate format")
     }else{
       TMS2 = list()
-      for(i in unique(substr(names(TMS),6,13))) {
+      for(i in unique(substr(basename(names(TMS)),6,13))) {
         x <- dplyr::bind_rows(TMS[(grep(names(TMS),pattern = i, value = T))])
         TMS2[[i]] <-x
       }
@@ -141,30 +147,44 @@ read_tomst = function (file, radius_units  = c("auto","um", "tomst"), interval =
       df = droplevels(df)
       # Measurement interval. This fnct will add lines in selected interval to complete missing data-stamps----
       # interval start
-      if(any(interval %in% c('auto', '1 min', '5 min', '15 min', '1 hour'))){
+      if(any(interval %in% c("auto", "1 min", "5 min", "15 min", "1 hour"))){
         if(interval[1] == "auto"){
           resol = df %>% dplyr::select(.id, date_time) %>% dplyr::group_by(.id) %>%
             dplyr::mutate(time_diff = difftime(date_time, lag(date_time), units = "mins") ) %>%
             filter(!is.na(time_diff)) %>%
+            dplyr:: filter(time_diff >= 1 & time_diff <= 1440) %>%
             dplyr::mutate(tot = n()) %>%
             dplyr::group_by(time_diff, .add = T) %>%
             dplyr::mutate(per = n()) %>%
             dplyr::distinct(.id, time_diff, .keep_all = T) %>%
             dplyr::summarise(time_diff_per = (per/tot)*100) %>%
-            dplyr:: filter(time_diff_per == max(time_diff_per, na.rm = T)) %>% select(-time_diff_per) %>% as.data.frame
+            dplyr::slice_max(time_diff_per, n = 1, with_ties = FALSE) %>%
+            select(-time_diff_per) %>%
+            as.data.frame
           if(is.na(resol$time_diff[1])|is.null(resol$time_diff[1])){
             stop("Wrong interval. Unable to detect interval. Please, check your data.")
           }else{
             df = df %>% dplyr::group_by(.id) %>%
-              tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=as.difftime(resol$time_diff[1], units = "mins"),tz = 'UTC')) %>%
-              dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
+              left_join(resol, by = ".id") %>%
+              tidyr::complete(date_time = seq.POSIXt(c(min(date_time)+(as.difftime(dplyr::first(time_diff))-lubridate::minute(min(date_time)))), max(date_time), by=as.difftime(dplyr::first(time_diff), units = "mins"),tz = 'UTC')) %>%
+              dplyr::arrange(date_time, .by_group = T) %>% dplyr::select(-time_diff) %>% as.data.frame()
             rm(resol)
           }
         }
         else{
-          df = df %>% group_by(.id) %>%
-            tidyr::complete(date_time = seq.POSIXt(min(date_time), max(date_time), by=interval ,tz = 'UTC')) %>%
-            dplyr::arrange(date_time, .by_group = T) %>% as.data.frame()
+          min_sequence = function(data = data, interval = "1 min"){
+            x = min(data$date_time)
+            x_minutes = as.numeric(lubridate::minute(min(data$date_time)))
+            y = as.numeric(as.difftime(lubridate::duration(paste0(interval))/60, units = "mins"))
+            z = x+lubridate::minutes(floor(y*(ceiling(x_minutes/y)-(x_minutes/y))))
+            return(z)
+          }
+          df = df %>%
+            dplyr::group_by(.id) %>%
+            dplyr::group_modify(~ {
+              start_time <- min_sequence(.x, interval = interval)
+              .x %>% tidyr::complete(date_time = seq.POSIXt(start_time, max(.x$date_time), by = interval, tz = "UTC")) %>%
+                dplyr::arrange(date_time)}) %>% dplyr::ungroup() %>% dplyr::arrange(.id) %>% as.data.frame()
         }
       }else{
         stop("Wrong interval. Use 'auto', '1 min', '5 min', '15 min', '1 hour'")

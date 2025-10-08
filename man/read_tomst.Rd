@@ -5,22 +5,25 @@
 \title{read_tomst}
 \usage{
 read_tomst(
+  path,
   file,
   radius_units = c("auto", "um", "tomst"),
-  interval = c("Auto", "1 min", "5 min", "15 min", "1 hour"),
+  interval = c("auto", "1 min", "5 min", "15 min", "1 hour"),
   TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B", "Sandy_Loam_A", "Sandy_Loam_B",
     "Loam", "Sil_Loam", "Peat", "Sand"),
   delim
 )
 }
 \arguments{
-\item{file}{If NULL, all csv files from working directory with name structure "data_8digitserialnumber_*.csv" are loaded. Alternatively a vector of names could be provided.}
+\item{path}{a character vector of full path name; the default corresponds to the working directory, getwd().}
 
-\item{radius_units}{The dendrometers' radius units used when downloaded from Tomst software. Use "auto" to convert units into micrometers automatically (default). Use either "tomst" or "um" to convert manually. Explicitly, if data were downloaded from Tomst software in micrometers, use "um", and if data were downloaded in Tomst units, use "tomst". This function is always trying to convert data into micrometers.If data lower than 1270 together with "tomst" units are found, warning message come up.The conversion formula is as follows: micrometers = (tomst-1278)*(8890/(34000-1278))}
+\item{file}{a character vector of file names; e.g., c("data_92241809_2025_04_04_0.csv", "data_92241809_2025_04_04_1.csv"). If missing, all csv files in the working directory matching the name pattern "data_8digitserialnumber_*.csv" will be loaded.}
 
-\item{interval}{Parameter used to fill in missing data_stamps on desired interval. 'Auto' detects the interval automatically. If multiple interval are detected, the shortest one is used. Note that the '.id' and 'date_time' columns are filled in; other columns will contain NA.}
+\item{radius_units}{the units of dendrometer radius used when downloading data using Tomst software. Use "auto" to automatically convert radius values into micrometers (default). Use either "tomst" or "um" to convert manually. Specifically, if the data were downloaded from Tomst software in micrometers, use "um", if data were downloaded in Tomst units, use "tomst". This function always attempts to convert data into micrometers.If values lower than 1270 are found together with "tomst" units, warning message will be displayed.The conversion formula from "tomst" units into micrometers is: micrometers = (tomst-1278)*(8890/(34000-1278))}
 
-\item{TMS_calibration}{Recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com 06.10.2025)}
+\item{interval}{parameter used to fill in missing data_stamps as the desired interval. "auto" detects the interval automatically. If multiple intervals are automatically detected, the prevailing one is used. Variables will contain NA for the filled in data_stamps. Shorter intervals than the desired one are kept in data.}
+
+\item{TMS_calibration}{recalculation of Tomst TMS soil moisture count into volumetric soil moisture based on calibration equations (version available on TOMST.com 06.10.2025). Loamy_Sand_A is used as default.}
 }
 \value{
 Data.frame with long type of data.
