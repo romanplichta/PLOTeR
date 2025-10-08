@@ -102,7 +102,7 @@ PLOTeR = function (){
                              actionButton("df_uploader", "Upload data.frame", class = "btn-success",style = "height: 35px; margin-left: 10px;"),
                              actionButton("tomst_uploader", "Upload Tomst", class = "btn-success",style = "height: 35px; margin-left: 10px;")
                              ),
-                             fluidRow(plotOutput("RadiusPlot"),
+                             fluidRow(plotOutput("Data_tab_plot"),
                                       align = "center", style = "margin-left: 20px; margin-right: 20px;"),
                              fluidRow(column(12,uiOutput(outputId = "dynamicdate1"))),
                              fluidRow(column(12, uiOutput(outputId = 'dynamicsliderInput'),
@@ -275,7 +275,7 @@ PLOTeR = function (){
                                                                     icon = icon("cog", lib = "glyphicon"),
                                                                     fluidRow(
                                                                       column(12,
-                                                                             shinyWidgets::materialSwitch("bar3","Lower plot"),
+                                                                             shinyWidgets::materialSwitch("lower_plot_switch","Lower plot"),
                                                                              # shinyWidgets::materialSwitch("group_switch2","Group", status = "primary"),
                                                                              conditionalPanel(condition = "input.group_switch2 == true",
                                                                                               selectInput("Groupby2", NULL,""),
@@ -740,7 +740,7 @@ PLOTeR = function (){
     # dynamic input of upper plot
     output$dynamicInput_upperplot <- renderUI({
       if(req(input$navbar) == "Plot"){
-        plotOutput('RadiusPlot2',
+        plotOutput('Plot_tab_upper_plot',
                    dblclick = if(isTRUE(plot_GS$active) & isFALSE(input$GS_switch_plot)){NULL}else{"RadiusPlot_dblclick"},
                    brush = if(isTRUE(plot_GS$active) & isFALSE(input$GS_switch_plot)){NULL}else{brushOpts(
                      id = "RadiusPlot_brush",
@@ -749,8 +749,8 @@ PLOTeR = function (){
     })
     # dynamic input of lower plot
     output$dynamicInput_lowerplot <- renderUI({
-      if(isTRUE(input$bar3)){
-        plotOutput('RadiusPlot3',
+      if(req(input$navbar) == "Plot" & isTRUE(input$lower_plot_switch)){
+        plotOutput('Plot_tab_lower_plot',
                    dblclick = if(isTRUE(plot_GS$active) & isTRUE(input$GS_switch_plot)){NULL}else{"RadiusPlot_dblclick"},
                    brush = if(isTRUE(plot_GS$active) & isTRUE(input$GS_switch_plot)){NULL}else{brushOpts(
                      id = "RadiusPlot_brush",
@@ -761,7 +761,7 @@ PLOTeR = function (){
     })
     # dynamic input of second plot in modal window
     #output$dynamicInput3 <- renderUI({
-    #if(isTRUE(input$bar3)){
+    #if(isTRUE(input$lower_plot_switch)){
     #plotOutput("plot_export2")
     #} else {
     #return(NULL)
@@ -790,12 +790,12 @@ PLOTeR = function (){
     })
     # GS done ----
     observeEvent(input$GS_Button_done,{
-      shinyWidgets::updateMaterialSwitch(session, "bar3", value = F)
+      shinyWidgets::updateMaterialSwitch(session, "lower_plot_switch", value = F)
       plot_GS$active = FALSE
     })
     GS_Button_save2 = reactive({list(input$GS_Button_done,input$GS_Button_save)})
     observeEvent(input$GS_Button_cancel,{
-      shinyWidgets::updateMaterialSwitch(session, "bar3", value = F)
+      shinyWidgets::updateMaterialSwitch(session, "lower_plot_switch", value = F)
       plot_GS$active = FALSE
       if(!is.null(d$c)){
         d$c = NULL
@@ -1272,7 +1272,7 @@ PLOTeR = function (){
         })
     })
     observe({
-      if(isFALSE(input$bar3)){
+      if(isFALSE(input$lower_plot_switch)){
         plot_GS$active = FALSE
       }
     })
@@ -1322,14 +1322,14 @@ PLOTeR = function (){
     #inputs for exported plots
     plot_export_funct = function(){
       if(isTRUE(input$legend_switch)){
-        if(isTRUE(input$bar3)){
+        if(isTRUE(input$lower_plot_switch)){
           grid.arrange(legend_appear_2(),plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(.4 * legend_rows(),2,2))
         } else {
           #plot_zooming()
           grid.arrange(legend_appear_2(), plot_appear_2(), ncol = 1, heights = c(.4 * legend_rows(),2))
         }
       }else{
-        if(isTRUE(input$bar3)){
+        if(isTRUE(input$lower_plot_switch)){
           grid.arrange(plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(2,2))
         } else {
           #plot_zooming()
@@ -1338,7 +1338,7 @@ PLOTeR = function (){
       }
     }
     height_funct = function(){
-      if(isTRUE(input$bar3)){
+      if(isTRUE(input$lower_plot_switch)){
         30
       } else {
         15
@@ -1693,7 +1693,7 @@ PLOTeR = function (){
             rm(data_fit, model_fit)
             shiny::incProgress(2/10, detail = "Done")
           plot_GS$active = TRUE
-          shinyWidgets::updateMaterialSwitch(session, "bar3", value = T)
+          shinyWidgets::updateMaterialSwitch(session, "lower_plot_switch", value = T)
         })
           }else{
           NULL
@@ -2244,7 +2244,7 @@ observe({
         if(isTRUE(input$freeze_switch) & input$variable_prim == "Radius"){
           plot_sec_axis_2()
         } else {
-          if(plot_GS$active & input$bar3){
+          if(plot_GS$active & input$lower_plot_switch){
             plot_prim_up_GS()+
               theme(legend.position = "none")
           } else {
@@ -2294,7 +2294,7 @@ observe({
     }
     # Plot_output ----
     #input data plot
-    output$RadiusPlot <- renderPlot({
+    output$Data_tab_plot <- renderPlot({
       input$goButton
       isolate(plot_appear_1())
     })
@@ -2308,17 +2308,17 @@ observe({
     #     RadiusPlot2_activator$active = FALSE
     #   )
     # })
-    # output$RadiusPlot2 <- renderPlot({
+    # output$Plot_tab_upper_plot <- renderPlot({
     #   req(input$navbar) == "Plot"
     #   RadiusPlot2_activator$active
     #   isolate(plot_appear_2())
     #   #plot_zooming()
     # })
-    output$RadiusPlot2 <- renderPlot({
+    output$Plot_tab_upper_plot <- renderPlot({
       plot_appear_2()
       #plot_zooming()
     })
-    output$RadiusPlot3 <- renderPlot({
+    output$Plot_tab_lower_plot <- renderPlot({
       plot_appear_3()
       #plot_zooming()
 
@@ -3986,8 +3986,10 @@ observe({
                                     'Sand' = matrix(data = c(-3.00E-9, 1.61E-4, -1.10E-1), nrow = 1, ncol = 3, dimnames = list(c("Sand"), c("a", "b", "c"))))
               if(is.null(input$select_tms_calib) | input$select_tms_calib == "none"){
                 # Moisture is not recalculated into volumetric soil moisture
+                showNotification(paste0("Raw TMS data were not recalculated."))
               }else{
                 df$Moisture = (tms_calib_data[[input$select_tms_calib]][1]*df$Moisture^2+tms_calib_data[[input$select_tms_calib]][1]*df$Moisture+tms_calib_data[[input$select_tms_calib]][1])*100
+                showNotification(paste0("TMS volumetric soil moisture according to ", input$select_tms_calib))
                 }
               # Soil type end
               df$T1 = as.numeric(df$T1)
