@@ -83,7 +83,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage("PLOTeR 1.0.7beta", position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", desc::desc(file = "DESCRIPTION")$get("Version")), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -482,7 +482,7 @@ PLOTeR = function (){
       data_mean <- .id <- n_to_remove <- date_time <- first <- last <- fill_lin <- fill_avg <- na_order<-
       left <- right <- fill_avg_right <- fill_avg_left <- fill_avg2 <- na_n <- fill_avg_mean <- Index_level2 <- nas <-
       meanx <- meany <- Variable <- rnum  <- beforeafter <- mins <-  inflect <- GS <- GS_start <- GS_end <- jumps <-
-      level_day <- level_week <- rect_ids <- stair_variable <- jump <-  NULL
+      level_day <- level_week <- rect_ids <- stair_variable <- jump <- tms_calib_data <- NULL
 
     Sys.setenv(LANGUAGE="en")
     Sys.setlocale("LC_TIME", "English")
@@ -3895,10 +3895,12 @@ observe({
     })
     observeEvent(input$tomst_uploader, {
       showModal(modalDialog(
-        selectInput("time_reso_input", "Time resolution:", choices = c("Auto","1 min", "5 min", "15 min", "1 hour")),
+        selectInput("time_reso_input", "Time resolution:", choices = c("auto","1 min", "5 min", "15 min", "1 hour")),
         shiny::fileInput("select_files", "Choose CSV Files", accept = ".csv", multiple = T),
         selectInput(inputId = "select_units", label = "Dendrometer data units?", selected = NULL,
-                    selectize =  F, choices = c("tomst", "micrometers")),
+                    selectize =  F, choices = c("auto", "tomst", "micrometers")),
+        selectInput(inputId = "select_tms_calib", label = "TMS calibration?", selected = "Loamy_Sand_A",
+                    selectize =  F, choices = c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand", "none")),
         easyClose = TRUE,
         footer = tagList(
           modalButton("Cancel"),
@@ -3972,15 +3974,29 @@ observe({
                 df$Radius = ifelse(df$.id > 93000000, NA, (df$Moisture-1278)*(8890/(34000-1278)))
               }
               df$Moisture = ifelse(df$.id >= 93000000 | df$.id %in% c(90181123, 91181123), df$Moisture, NA)
-              # #loamy_sand_A
-              df$Moisture = (-1.90e-8*df$Moisture^2+2.66e-4*df$Moisture-1.54e-1)*100
+              # Soil type calibration lines----
+              # Soil type start
+              tms_calib_data = list('Loamy_Sand_A' = matrix(data = c(-1.90e-8, 2.66e-4, -1.54e-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_A"), c("a", "b", "c"))),
+                                    'Loamy_Sand_B' = matrix(data = c(-2.30E-8, 2.82E-4, -1.67E-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_B"), c("a", "b", "c"))),
+                                    'Sandy_Loam_A' = matrix(data = c(-3.80E-8, 3.39E-4, -2.15E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_A"), c("a", "b", "c"))),
+                                    'Sandy_Loam_B' = matrix(data = c(-9.00E-10, 2.62E-4, -1.59E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_B"), c("a", "b", "c"))),
+                                    'Loam' = matrix(data = c(-5.10E-8, 3.98E-4, -2.91E-1), nrow = 1, ncol = 3, dimnames = list(c("Loam"), c("a", "b", "c"))),
+                                    'Sil_Loam' = matrix(data = c(1.70E-8, 1.18E-4, -1.01E-1), nrow = 1, ncol = 3, dimnames = list(c("Sil_Loam"), c("a", "b", "c"))),
+                                    'Peat' = matrix(data = c(1.23E-7, -1.45E-4, 2.03E-1), nrow = 1, ncol = 3, dimnames = list(c("Peat"), c("a", "b", "c"))),
+                                    'Sand' = matrix(data = c(-3.00E-9, 1.61E-4, -1.10E-1), nrow = 1, ncol = 3, dimnames = list(c("Sand"), c("a", "b", "c"))))
+              if(is.null(input$select_tms_calib) | input$select_tms_calib == "none"){
+                # Moisture is not recalculated into volumetric soil moisture
+              }else{
+                df$Moisture = (tms_calib_data[[input$select_tms_calib]][1]*df$Moisture^2+tms_calib_data[[input$select_tms_calib]][1]*df$Moisture+tms_calib_data[[input$select_tms_calib]][1])*100
+                }
+              # Soil type end
               df$T1 = as.numeric(df$T1)
               df$T2 = as.numeric(ifelse(df$.id >= 93000000, df$T2, NA))
               df$T3 = as.numeric(ifelse(df$.id >= 93000000, df$T3, NA))
               df$.id = as.factor(df$.id)
               df = droplevels(df)
               shiny::incProgress(2/10, detail = "Arranging")
-              if(input$time_reso_input == "Auto"){
+              if(input$time_reso_input == "auto"){
                 resol = df %>% select(.id, date_time) %>% group_by(.id) %>%
                   mutate(time_diff = difftime(date_time, lag(date_time), units = "mins") ) %>%
                   filter(!is.na(time_diff)) %>%
