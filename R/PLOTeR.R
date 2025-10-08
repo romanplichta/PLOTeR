@@ -223,6 +223,27 @@ PLOTeR = function (){
                                                                     )
                                                  )),
                                                  div(style = "width: 5px;"),
+                                                 div(shinyWidgets::dropMenu(actionButton(inputId = "Plotsgeneral",
+                                                                                         label = 'Plots',
+                                                                                         class = "btn-primary",
+                                                                                         circle = FALSE,
+                                                                                         icon = icon("cog", lib = "glyphicon")),
+                                                                            fluidRow(
+                                                                              column(12,align="left",
+                                                                                     fluidRow(
+                                                                                       column(5,shinyWidgets::materialSwitch("legend_switch","Legend", status = "primary", right = T, value = T)),
+                                                                                       column(7,conditionalPanel(condition = "input.legend_switch == true",
+                                                                                                                 uiOutput(outputId = 'legend_val')))),
+                                                                                     shinyWidgets::materialSwitch("one_by_one_switch","Show all", status = "primary", value = F,right = T),
+                                                                                     column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
+                                                                                     br(),
+                                                                                     shinyWidgets::materialSwitch("cleaner_mode_switch",HTML(paste0("Cleaning mode",tags$sup("beta"))), status = "primary", value = F, right = T)
+                                                                              )
+                                                                            ),
+                                                                            # hideOnClick = "toogle"
+                                                                            hideOnClick = T
+                                                 )),
+                                                 div(style = "width: 5px;"),
                                                  div(shinyWidgets::dropMenu(actionButton(inputId = "Upperplot",
                                                                            label = 'Upper plot',
                                                                            class = "btn-primary",
@@ -230,10 +251,7 @@ PLOTeR = function (){
                                                                            icon = icon("cog", lib = "glyphicon")),
                                                               fluidRow(
                                                                 column(12,align="left",
-                                                                       fluidRow(
-                                                                         column(5,shinyWidgets::materialSwitch("legend_switch","Legend", status = "primary", right = T, value = T)),
-                                                                         column(7,conditionalPanel(condition = "input.legend_switch == true",
-                                                                                                   uiOutput(outputId = 'legend_val')))),
+                                                                       selectInput("upper_plot_interval_input", "Interval",choices = c("original","min", "hour","day")),
                                                                        shinyWidgets::materialSwitch("group_switch_upper_plot","Group", status = "primary", right = T),
                                                                        conditionalPanel(condition = "input.group_switch_upper_plot == true",
                                                                                         selectInput("Groupby_upper_plot", NULL,""),
@@ -242,41 +260,36 @@ PLOTeR = function (){
                                                                                         shinyWidgets::materialSwitch("se_switch_upper_plot","SE",value = T, status = "info", width = "50%"),
                                                                                         shinyWidgets::materialSwitch("regre_switch",HTML(paste0("Regression",tags$sup("beta"))), status = "info")
                                                                        ),
-                                                                       shinyWidgets::materialSwitch("one_by_one_switch","Show all", status = "primary", value = F,right = T),
-                                                                       selectInput("bar18", "Interval",choices = c("original","min", "hour","day")),
                                                                        column(10,actionButton(inputId = 'bar6', label = "Subtract offset", width = "100%")),
                                                                        column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
-                                                                       br(),
-                                                                       br(),
-                                                                       shinyWidgets::materialSwitch("freeze_switch","Show Freeze", status = "primary", value = F, right = T),
-                                                                       conditionalPanel(condition = "input.freeze_switch == true",
-                                                                                        selectInput("method3", "Method:", choices = c("Raw", "Fine"), selected = "Raw")
-                                                                                        # ,
-                                                                                        # numericInput("bar32", "Minpoints:", min = 3, max = 60, step = 1, value = 20),
-                                                                                        # numericInput("bar33", "Min T:", min = -10, max = 10, step = 1, value = -5),
-                                                                                        # numericInput("bar34", "Mean",  min = -10, max = 10, step = 1, value = 5)
-                                                                       ),
-                                                                       shinyWidgets::materialSwitch("anomalies_switch","Show Anomalies", status = "primary", value = F, right = T),
-                                                                       conditionalPanel(condition = "input.anomalies_switch == true",
-                                                                                        column(6,numericInput("minpoints_val", "Density threshold:", min = 10, max = 200, step = 10, value = 100)),
-                                                                                        column(6,actionButton("bar38", "",icon = icon("refresh", lib = "glyphicon"), status = "primary", style = 'margin-top:23px'))
-                                                                       ),
-                                                                       shinyWidgets::materialSwitch("cleaner_mode_switch",HTML(paste0("Cleaning mode",tags$sup("beta"))), status = "primary", value = F, right = T)
-
+                                                                       # shinyWidgets::materialSwitch("freeze_switch","Show Freeze", status = "primary", value = F, right = T),
+                                                                       # conditionalPanel(condition = "input.freeze_switch == true",
+                                                                       #                  selectInput("method3", "Method:", choices = c("Raw", "Fine"), selected = "Raw")
+                                                                       #                  # ,
+                                                                       #                  # numericInput("bar32", "Minpoints:", min = 3, max = 60, step = 1, value = 20),
+                                                                       #                  # numericInput("bar33", "Min T:", min = -10, max = 10, step = 1, value = -5),
+                                                                       #                  # numericInput("bar34", "Mean",  min = -10, max = 10, step = 1, value = 5)
+                                                                       # ),
+                                                                       # shinyWidgets::materialSwitch("anomalies_switch","Show Anomalies", status = "primary", value = F, right = T),
+                                                                       # conditionalPanel(condition = "input.anomalies_switch == true",
+                                                                       #                  column(6,numericInput("minpoints_val", "Density threshold:", min = 10, max = 200, step = 10, value = 100)),
+                                                                       #                  column(6,actionButton("bar38", "",icon = icon("refresh", lib = "glyphicon"), status = "primary", style = 'margin-top:23px'))
+                                                                       # ),
                                                                 )
                                                               ),
                                                               # hideOnClick = "toogle"
                                                               hideOnClick = T
                                                  )),
                                                  div(style = "width: 5px;"),
-                                                 div(shinyWidgets::dropdownButton(label = 'Lower plot',
+                                                 div(shinyWidgets::dropdownButton(inputId = "Lowerplot",
+                                                                    label = 'Lower plot',
                                                                     status = "primary",
                                                                     circle = FALSE,
                                                                     icon = icon("cog", lib = "glyphicon"),
                                                                     fluidRow(
-                                                                      # change8 ----
                                                                       column(12,align="left",
-                                                                             shinyWidgets::materialSwitch("lower_plot_switch","Lower plot", status = "primary",),
+                                                                             shinyWidgets::materialSwitch("lower_plot_switch","Lower plot", status = "primary"),
+                                                                             selectInput("lower_plot_interval_input", "Interval",choices = c("original","min", "hour","day")),
                                                                              shinyWidgets::materialSwitch("group_switch_lower_plot","Group", status = "primary"),
                                                                              conditionalPanel(condition = "input.group_switch_lower_plot == true",
                                                                                               selectInput("Groupby_lower_plot", NULL,""),
@@ -1430,28 +1443,28 @@ PLOTeR = function (){
       } else {
         c = d$a
       }
-      #sel = input$plot_brushed_points_rows_selected
-      #dat3 = c[sel,]
-      if(input$bar18 == "min" | input$bar18 == "original" ){
-      } else {
-        if(input$bar18 == "hour"){
-          c = as.data.frame(c %>% dplyr::group_by(.id) %>% dplyr::filter(minute(date_time) == 00))
-        } else {
-          if(input$bar18 == "day"){
-            c = as.data.frame(c %>% dplyr::group_by(.id) %>% dplyr::filter(hour(date_time) == 00 & minute(date_time) == 00))
-          }
-        }
-      }
-      # if(input$method_upper_plot == "mean") {
-      #   c = as.data.frame(c %>% group_by(!!rlang::sym(input$Groupby_upper_plot),date_time) %>% summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))))
-      # }
       return(c)
     })
-    # %>% debounce(1000)
     plot_upper_plot = function(){
         rows = input$legend_value
+        data_upper_plot <- plot_plot_data() %>% {
+          if (input$upper_plot_interval_input == "original") {
+            .
+          } else if (input$upper_plot_interval_input == "min") {
+            dplyr::group_by(., .id) %>%
+              dplyr::filter(lubridate::second(date_time) == 0)
+          } else if (input$upper_plot_interval_input == "hour") {
+            dplyr::group_by(., .id) %>%
+              dplyr::filter(lubridate::minute(date_time) == 0)
+          } else if (input$upper_plot_interval_input == "day") {
+            dplyr::group_by(., .id) %>%
+              dplyr::filter(lubridate::hour(date_time) == 0 & lubridate::minute(date_time) == 0)
+          } else {
+            .
+          }
+        }
         if(input$method_upper_plot == "mean") {
-          {if(input$Groupby_upper_plot == "none"){ggplot(data = plot_plot_data() %>%
+          {if(input$Groupby_upper_plot == "none"){ggplot(data = data_upper_plot %>%
                                                            group_by(date_time) %>%
                                                            summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                                                            as.data.frame(),
@@ -1459,11 +1472,11 @@ PLOTeR = function (){
               geom_line(colour = "#3366FF")+
               {if(isTRUE(input$se_switch_upper_plot)){
                 geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
-          }else{ggplot(data = plot_plot_data() %>%
+          }else{ggplot(data = data_upper_plot %>%
                          group_by(!!rlang::sym(input$Groupby_upper_plot),date_time) %>%
                          summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                          as.data.frame(),
-                       aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$input$Groupby_upper_plot]], fill = .data[[input$input$Groupby_upper_plot]]))+
+                       aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$Groupby_upper_plot]], fill = .data[[input$Groupby_upper_plot]]))+
               geom_line()+
               {if(isTRUE(input$se_switch_upper_plot)){
                 geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
@@ -1474,7 +1487,7 @@ PLOTeR = function (){
             theme(legend.position = "top")+
             ylab(label = input$variable_prim)
         } else {
-          ggplot(data = plot_plot_data(), aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
+          ggplot(data = data_upper_plot, aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
             {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes(colour=.data[[".id"]]))
             }else {
               {if(input$Groupby_upper_plot == "none"){geom_smooth(method = input$method_upper_plot, se=input$se_switch_upper_plot)}
@@ -1485,8 +1498,24 @@ PLOTeR = function (){
             theme(legend.position = "top")}
       }
     plot_lower_plot = function() {
+      data_lower_plot <- plot_plot_data() %>% {
+        if (input$lower_plot_interval_input == "original") {
+          .
+        } else if (input$lower_plot_interval_input == "min") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::second(date_time) == 0)
+        } else if (input$lower_plot_interval_input == "hour") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::minute(date_time) == 0)
+        } else if (input$lower_plot_interval_input == "day") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::hour(date_time) == 0 & lubridate::minute(date_time) == 0)
+        } else {
+          .
+        }
+      }
       if(input$method_lower_plot == "mean") {
-        {if(input$Groupby_lower_plot == "none"){ggplot(data = plot_plot_data() %>%
+        {if(input$Groupby_lower_plot == "none"){ggplot(data = data_lower_plot %>%
                        group_by(date_time) %>%
                        summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                        as.data.frame(),
@@ -1494,11 +1523,11 @@ PLOTeR = function (){
             geom_line(colour = "#3366FF")+
             {if(isTRUE(input$se_switch_lower_plot)){
               geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
-            }else{ggplot(data = plot_plot_data() %>%
+            }else{ggplot(data = data_lower_plot %>%
                         group_by(!!rlang::sym(input$Groupby_lower_plot),date_time) %>%
                         summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                         as.data.frame(),
-                      aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$input$Groupby_lower_plot]], fill = .data[[input$input$Groupby_lower_plot]]))+
+                      aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$Groupby_lower_plot]], fill = .data[[input$Groupby_lower_plot]]))+
                 geom_line()+
                 {if(isTRUE(input$se_switch_lower_plot)){
                   geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
@@ -1509,7 +1538,7 @@ PLOTeR = function (){
           theme(legend.position = "none")+
           ylab(label = input$variable_prim)
       } else {
-        ggplot(data = plot_plot_data(), aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
+        ggplot(data = data_lower_plot, aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
           {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes(colour=.data[[".id"]]))
           }else {
             {if(input$Groupby_lower_plot == "none"){geom_smooth(method = input$method_lower_plot, se=input$se_switch_lower_plot)}
@@ -1549,12 +1578,12 @@ PLOTeR = function (){
       } else {
         dat2 = d$a
       }
-      if(input$bar18 == "min" | input$bar18 == "original" ){
+      if(input$upper_plot_interval_input == "min" | input$upper_plot_interval_input == "original" ){
       } else {
-        if(input$bar18 == "hour"){
+        if(input$upper_plot_interval_input == "hour"){
           dat2 = as.data.frame(dat2 %>% dplyr::group_by(.id) %>% dplyr::filter(minute(date_time) == 00))
         } else {
-          if(input$bar18 == "day"){
+          if(input$upper_plot_interval_input == "day"){
             dat2 = as.data.frame(dat2 %>% dplyr::group_by(.id) %>% dplyr::filter(hour(date_time) == 00 & minute(date_time) == 00))
           }
         }
@@ -2004,7 +2033,23 @@ PLOTeR = function (){
       rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
       rect_data = if(is.null(cleaner_mode_rect$data )){data.frame()}else{cleaner_mode_rect$data %>% filter(.id %in% rect_ids) %>% droplevels()}
       rect_data_levelup = if(is.null(cleaner_mode_rect$data_levelup )){data.frame()}else{cleaner_mode_rect$data_levelup %>% filter(.id %in% rect_ids_levelup) %>% droplevels()}
-      ggplot(data = plot_plot_data(), aes_string("date_time", input$variable_prim, colour = ".id")) +
+      plot_prim_cleaner_mode_data = plot_plot_data() %>% {
+        if (input$upper_plot_interval_input == "original") {
+          .
+        } else if (input$upper_plot_interval_input == "min") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::second(date_time) == 0)
+        } else if (input$upper_plot_interval_input == "hour") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::minute(date_time) == 0)
+        } else if (input$upper_plot_interval_input == "day") {
+          dplyr::group_by(., .id) %>%
+            dplyr::filter(lubridate::hour(date_time) == 0 & lubridate::minute(date_time) == 0)
+        } else {
+          .
+        }
+      }
+      ggplot(data = plot_prim_cleaner_mode_data, aes_string("date_time", input$variable_prim, colour = ".id")) +
         geom_line()+
       # change7----
       # {if(isFALSE(input$fine_mode)){{if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}}
