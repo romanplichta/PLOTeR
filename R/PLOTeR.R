@@ -3,7 +3,6 @@
 #' @format A default dataset includes:
 #' \describe{
 #'   \item{.id}{device serial number}
-#'   \item{Index_level}{Index of manipulated data}
 #'   \item{Moisture}{moisture data in percentage}
 #'   \item{Radius}{radius data in micrometers}
 #'   \item{T1}{Temperature 1 of TMS sensors}
@@ -97,26 +96,31 @@ PLOTeR = function (){
                                              textOutput("SliderText")),
                                              style = "margin-left: 50px; margin-right: 50px;"),
                              fluidRow(column(12,
-                                             column(3,
-                                                    selectInput("variable_prim", "primary axis:",""),
-                                                    align = "left"),
-                                             # column(1, offset = 4, br(),
-                                             #        checkboxInput("sec_ax",HTML(paste0("sec axis",tags$sup("beta"))), value = F)),
-                                             column(3,uiOutput(outputId = "dynamicInput"),
-                                                    align = "right"
-                                             )),
-                                      style = "margin-left: 50px; margin-right: 50px;"
+                                             # actionButton("goButton", "Render plot", class = "btn-primary"),
+                                             actionButton("bar43", "Append data", class = "btn-danger"),
+                                             actionButton("bar19", "Change interval", class = "btn-danger"),
+                                             actionButton("bar17", "Subset data", class = "btn-danger"),
+                                             align = "center", style = "margin-bottom: 0px;", style = "margin-top: 9px;",style = "margin-left: 10px;")
+
+                               # column(12,
+                               #               column(3,
+                               #                      br(),
+                               #                      br,
+                               #                      # selectInput("variable_prim", "primary axis:",""),
+                               #                      align = "left"),
+                               #               # column(1, offset = 4, br(),
+                               #               #        checkboxInput("sec_ax",HTML(paste0("sec axis",tags$sup("beta"))), value = F)),
+                               #               column(3,uiOutput(outputId = "dynamicInput"),
+                               #                      align = "right"
+                               #               )),
+                               #        style = "margin-left: 50px; margin-right: 50px;"
                              ),
                              fluidRow(column(3,
                                              column(3,checkboxInput("bar","All/None", value = F)),
                                              column(3,shinyWidgets::switchInput("meta_switch",size = "mini", onLabel = "AND", offLabel = "OR",onStatus = "info", offStatus = "info", value = T, inline = T, width = "auto"),
                                                     align = "center", style = "margin-bottom: 0px;", style = "margin-top: 9px;"),
-                                             column(1,actionButton("refresh_meta", "",icon = icon("refresh", lib = "glyphicon"), status = "primary",align = "center", style="padding:4px 8px; font-size:90%;",style = "margin-top: 9px;"))),
-                                      column(7, actionButton("goButton", "Render plot", class = "btn-primary"),
-                                             actionButton("bar43", "Append data", class = "btn-danger"),
-                                             actionButton("bar19", "Change interval", class = "btn-danger"),
-                                             actionButton("bar17", "Subset data", class = "btn-danger"),
-                                             align = "left", style = "margin-bottom: 0px;", style = "margin-top: 9px;",style = "margin-left: 10px;")
+                                             column(1,actionButton("refresh_meta", "",icon = icon("refresh", lib = "glyphicon"), status = "primary",align = "center", style="padding:4px 8px; font-size:90%;",style = "margin-top: 9px;")))
+
                              ),
                              fluidRow(uiOutput(outputId = 'multifilter2')
                              ),
@@ -238,6 +242,7 @@ PLOTeR = function (){
                                                                            icon = icon("cog", lib = "glyphicon")),
                                                               fluidRow(
                                                                 column(12,align="left",
+                                                                       selectInput("variable_prim", "Variable",""),
                                                                        selectInput("upper_plot_interval_input", "Interval",choices = c("original","min", "hour","day")),
                                                                        shinyWidgets::materialSwitch("group_switch_upper_plot","Group", status = "primary", right = T),
                                                                        conditionalPanel(condition = "input.group_switch_upper_plot == true",
@@ -482,7 +487,7 @@ PLOTeR = function (){
 
     freeze_show_first <- GRO <- freeze_show2_first <- Radius_first <- T1_freeze2 <- lead_trail2 <- lead_trail1 <-
       T1_freeze <- freeze_show2 <- cluster_zero2 <- cluster_zero<- cluster <- x <- man_int_var <- man_lev_var <-
-      Index_level.x <- Index_level.y <- Radius.x <- Radius.y <- Index_level <- Radius <- freeze_show2 <- data_se <-
+      Radius.x <- Radius.y <- Radius <- freeze_show2 <- data_se <-
       data_mean <- .id <- n_to_remove <- date_time <- first <- last <- fill_lin <- fill_avg <- na_order<-
       left <- right <- fill_avg_right <- fill_avg_left <- fill_avg2 <- na_n <- fill_avg_mean <- Index_level2 <- nas <-
       meanx <- meany <- Variable <- rnum  <- beforeafter <- mins <-  inflect <- GS <- GS_start <- GS_end <- jumps <-
@@ -612,7 +617,6 @@ PLOTeR = function (){
     #axis choices removing columns including only NA
     f <- reactive({
       f_col = colnames(Filter(is.numeric, select_if(d$a,function(x){!all(is.na(x))})))
-      f_col[!f_col %in% c('Index_level', "freeze_show2", "freeze_show", "Raw", "Fine")]
     })
     sele_prim <- reactive({
       if(input$variable_prim %in% f()){
@@ -788,7 +792,7 @@ PLOTeR = function (){
           actionButton("GS_Button_done", "Done"),
           actionButton("GS_Button_move", "Move/Add"),
           actionButton("GS_Button_delete", "Delete"),
-          actionButton("GS_Button_recalculate", "Re-calculate"),
+          actionButton("GS_Button_recalculate", "Recalculate"),
           actionButton("GS_Button_save", "Save"),
           actionButton("GS_Button_cancel", "Cancel"),
           actionButton("GS_Button_summary", "Summary"),
@@ -860,11 +864,11 @@ PLOTeR = function (){
                     label = "Method:",
                     choices = c("fit_variable_rate","fit_model_rate")),
         numericInput("upper_gro_thr",
-                    "Upper growth threshold (%):",
-                    value = 0.98, min = 0, max = 1, step = 0.01),
+                    "Total growth threshold (%):",
+                    value = 98, min = 0, max = 100, step = 1),
         numericInput("no_growth_thr",
                      HTML("No growth threshold (&mu;m):"),
-                     value = 2, min = 0, max = 10, step = 1),
+                     value = 2, min = 0, max = 10, step = .5),
         selectInput("GS_Input_excl_month", "Ignore months:", selected = NULL, multiple = T, choices = c("1","2","3","4","5","6","7","8","9","10","11","12"), width = "200px"),
         shinyWidgets::materialSwitch("GS_remove_freeze", label = "Remove freeze days?", status = "info"),
         easyClose = T,
@@ -1083,6 +1087,7 @@ PLOTeR = function (){
             dplyr::filter(lubridate::hour(date_time) == 00 & lubridate::minute(date_time) == 00) %>%
             ungroup() %>%
             dplyr::mutate(year = as.factor(lubridate::year(date_time))) %>%
+            dplyr::select(-any_of(setdiff(colnames(data_fit), c(".id", "date_time", "year")))) %>%
             dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
             as.data.frame()
           rm(data_fit)
@@ -1731,6 +1736,7 @@ PLOTeR = function (){
               dplyr::filter(hour(date_time) == 00 & minute(date_time) == 00) %>%
               ungroup() %>%
               dplyr::mutate(year = as.factor(year(date_time))) %>%
+              dplyr::select(-any_of(setdiff(colnames(data_fit), c(".id", "date_time", "year")))) %>%
               dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
               group_by(.id, year) %>%
               as.data.frame()
@@ -2733,21 +2739,12 @@ observe({
             mutate(Index_level2 =  cumsum(replace_na(Index_level2,0))) %>%
             mutate(Index_level2 = na_if(Index_level2,0)) %>%
             mutate(Radius = ifelse(is.na(Index_level2), Radius, Radius - Index_level2)) %>%
-            mutate(Radius = ifelse(is.na(nas), NA, Radius))  %>% select(.id, date_time, Index_level, Radius)%>%
+            mutate(Radius = ifelse(is.na(nas), NA, Radius))  %>% select(.id, date_time, Radius)%>%
             as.data.frame()
           #data.frame manipulation
           shiny::incProgress(1/10, detail = "merging data")
-          if(!any(colnames(df) %in% 'Index_level')){df$Index_level <- NA
-          }else{
-            NULL
-          }
-          if(!any(colnames(df2) %in% 'Index_level')){df2$Index_level <- NA
-          }else{
-            NULL
-          }
           #assign to global environment
-          df = left_join(df, df2, by = c('.id', 'date_time')) %>% dplyr::mutate(Radius.x = ifelse(is.na(Radius.y), Radius.x, Radius.y),
-                                                                                Index_level.x = ifelse(is.na(Index_level.y), Index_level.x, Index_level.y)) %>%
+          df = left_join(df, df2, by = c('.id', 'date_time')) %>% dplyr::mutate(Radius.x = ifelse(is.na(Radius.y), Radius.x, Radius.y)) %>%
             dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% dplyr::select(paste(colnames(df)))
           rm(df2)
           df = as.data.frame(df %>% dplyr::group_by(.id) %>% dplyr::arrange(date_time, .by_group = T))
@@ -2814,16 +2811,12 @@ observe({
           footer = modalButton("OK")
         ))
       }else{
-        if(!any(colnames(df) %in% 'Index_level')){df$Index_level <- NA}
         df3 = df3 %>% arrange(date_time) %>% dplyr::rename(man_lev_var = input$variable_prim)
         #data.frame manipulation
-        if(!any(colnames(df3) %in% 'Index_level')){df3$Index_level <- NA}
-        # df3 = as.data.frame(df3 %>% mutate(man_lev_var = man_lev_var-isolate(diff$val),Index_level = 1))
-        df3 = as.data.frame(df3 %>% mutate(man_lev_var = man_lev_var-isolate(-1*input$moveupInput_div),Index_level = 1))
+        df3 = as.data.frame(df3 %>% mutate(man_lev_var = man_lev_var-isolate(-1*input$moveupInput_div)))
         #assign to global environment
-        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_lev_var = ifelse(!is.na(man_lev_var), man_lev_var,!!rlang::sym(input$variable_prim)),
-                                                                       Index_level.x = ifelse(is.na(Index_level.y), Index_level.x, Index_level.y)) %>%
-          dplyr::rename(Index_level = Index_level.x) %>% select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
+        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_lev_var = ifelse(!is.na(man_lev_var), man_lev_var,!!rlang::sym(input$variable_prim))) %>%
+          dplyr::select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
         df = plyr::rename(df, c("man_lev_var" = input$variable_prim))
         df = as.data.frame(df %>% group_by(.id) %>% arrange(date_time, .by_group = T))
         assign('df', df, envir=envir)
@@ -2894,15 +2887,11 @@ observe({
         last  = tail(df3,1)
         diff = last(df3$man_lev_var)-first(df3$man_lev_var)
         #data.frame manipulation
-        if(!any(colnames(df) %in% 'Index_level')){df$Index_level <- NA}
-        if(!any(colnames(df3) %in% 'Index_level')){df3$Index_level <- NA}
         df3 = as.data.frame(df %>% filter(.id == levels(df3$.id)) %>% dplyr::rename(man_lev_var = input$variable_prim) %>%
-                              mutate(man_lev_var = ifelse(between(date_time, first$date_time, last$date_time), first$man_lev_var, ifelse(date_time > last$date_time, man_lev_var-diff, man_lev_var)),
-                                     Index_level = ifelse(Index_level == 1 | between(date_time, first$date_time, last$date_time), 1, NA)))
+                              mutate(man_lev_var = ifelse(between(date_time, first$date_time, last$date_time), first$man_lev_var, ifelse(date_time > last$date_time, man_lev_var-diff, man_lev_var))))
         #assign to global environment
-        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_lev_var = ifelse(is.na(man_lev_var), !!rlang::sym(input$variable_prim), man_lev_var),
-                                                                       Index_level.x = ifelse(is.na(Index_level.y), Index_level.x, Index_level.y)) %>%
-          dplyr::rename(Index_level = Index_level.x) %>% select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
+        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_lev_var = ifelse(is.na(man_lev_var), !!rlang::sym(input$variable_prim), man_lev_var)) %>%
+          dplyr::select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
         df = plyr::rename(df, c("man_lev_var" = input$variable_prim))
         df = as.data.frame(df %>% group_by(.id) %>% arrange(date_time, .by_group = T))
         assign('df', df, envir=envir)
@@ -2939,16 +2928,13 @@ observe({
         #put there data between first and last
         df3 = as.data.frame(df %>% filter(.id %in% levels(df3$.id) & between(date_time, first$date_time, last$date_time)))
         #data.frame manipulation
-        if(!any(colnames(df) %in% 'Index_level')){df$Index_level <- NA}
-        if(!any(colnames(df3) %in% 'Index_level')){df3$Index_level <- NA}
-        df3 = as.data.frame(df3 %>% mutate(man_int_var = NA_real_,Index_level = 1) %>% select(-input$variable_prim))
+        df3 = as.data.frame(df3 %>% mutate(man_int_var = NA_real_) %>% select(-input$variable_prim))
         df3$man_int_var[1] = first$man_int_var
         df3$man_int_var[length(df3$man_int_var)] = last$man_int_var
         df3 = as.data.frame(df3 %>% mutate(man_int_var = na.approx(man_int_var)))
         #assign to global environment
-        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_int_var = ifelse(!is.na(man_int_var), man_int_var,!!rlang::sym(input$variable_prim)),
-                                                                       Index_level.x = ifelse(is.na(Index_level.y), Index_level.x, Index_level.y)) %>%
-          dplyr::rename(Index_level = Index_level.x) %>% select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
+        df = left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(man_int_var = ifelse(!is.na(man_int_var), man_int_var,!!rlang::sym(input$variable_prim))) %>%
+          dplyr::select(-c(!!rlang::sym(input$variable_prim),ends_with('.y'))) %>% rename_all(~sub('.x', '', .x, fixed=T))
         df = plyr::rename(df, c("man_int_var" = input$variable_prim))
         df = as.data.frame(df %>% group_by(.id) %>% arrange(date_time, .by_group = T))
         assign('df', df, envir=envir)
@@ -3561,14 +3547,16 @@ observe({
     observeEvent(input$bar30, {
       showModal(modalDialog(
         title = "Decompose Radius of selected devices to GRO, TWD and FREEZE?",
-        HTML("This process will add new columns! Clean the Radius data before this step!"),
+        HTML("Is the dendrometer growth variable selected in the upper plot?<br>
+               Clean the dendrometer data before this step!"),
         br(),
         br(),
-        selectInput("bar31", "Freeze method:", choices = c("Raw", "Fine")),
-        numericInput("bar32", "Density clustering Minpoints:", min = 3, max = 60, step = 1, value = 20),
-        numericInput("bar33", "Minimum temperature method1:", min = -10, max = 10, step = 1, value = 5),
-        numericInput("bar35", "Minimum temperature forced filtered method_lower_plot:", min = -10, max = 10, step = 1, value = -5),
-        numericInput("bar34", "Mean daily temperature with below zero temperature:",  min = -10, max = 10, step = 1, value = 5),
+        # selectInput("bar31", "Freeze method:", choices = c("Raw", "Fine")),
+        # numericInput("bar32", "Density clustering Minpoints:", min = 3, max = 60, step = 1, value = 20),
+        # numericInput("bar33", "Minimum temperature method1:", min = -10, max = 10, step = 1, value = 5),
+        # numericInput("bar35", "Minimum temperature forced filtered method_lower_plot:", min = -10, max = 10, step = 1, value = -5),
+        # numericInput("bar34", "Mean daily temperature with below zero temperature:",  min = -10, max = 10, step = 1, value = 5),
+        numericInput("freeze_temp_input", "Freeze temperature",  min = -10, max = 10, step = 0.1, value = 0),
         easyClose = TRUE,
         footer = tagList(
           modalButton("Cancel"),
@@ -3578,9 +3566,10 @@ observe({
     })
 
     observeEvent(input$ok_bar13, {
-      if(isTRUE(input$freeze_switch)){
-        shinyWidgets::updateMaterialSwitch(session, "freeze_switch", value = F)
-      }
+      # if(isTRUE(input$freeze_switch)){
+      #   shinyWidgets::updateMaterialSwitch(session, "freeze_switch", value = F)
+      # }
+      req(!input$variable_prim == "T1")
       GRO_TWD_FREEZE()
       d$b <- df
       removeModal()
@@ -3591,77 +3580,110 @@ observe({
         message = paste0("Processing..."),
         detail = "Definitions",
         value = 0,
-        {df6 =as.data.frame(isolate(d$a))
-        df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::filter(!all(is.na(Radius))) %>% droplevels() %>% dplyr::mutate(date = floor_date(date_time, unit = "day")) %>%  dplyr::group_by(.id,date) %>%
-          dplyr::mutate(T1_freeze = case_when(
-            min(T1) < input$bar33 ~ TRUE,TRUE ~ FALSE),
-            T1_freeze2 = case_when(
-              min(lag(T1,n = 96)) < -0 ~ TRUE,
-              min(T1) < input$bar35 ~ TRUE,
-              mean(T1) < input$bar34 & min(T1) < 0 ~ TRUE,
-              TRUE ~ FALSE)) %>% dplyr::ungroup()
-        shiny::incProgress(2/10, detail = "Anomalies")
-        df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::mutate(nrow = row_number())
-        # analysing distance and size, change the minpoints to see the effect
-        minpoints = input$bar32
-        df6_cluster = data.frame(matrix(ncol = 3, nrow = 0))
-        colnames(df6_cluster) <- c(".id", "date_time", "cluster")
-        for(i in levels(df6$.id)){
-          df6_sub = droplevels(subset(df6, .id == i, select = c(".id","Radius", "nrow", "date_time")))
-          df6_sub = na.omit(df6_sub)
-          dist = kNNdist(as.matrix(df6_sub[,c("Radius", "nrow"),]), k = minpoints - 1)
-          size = quantile(dist, 0.975)
-          # Cluster with the chosen parameters
-          res = dbscan(as.matrix(df6_sub[,c("Radius", "nrow"),]), eps = size, minPts = minpoints, borderPoints = F)
-          df6_sub$cluster = res$cluster
-          df6_sub = df6_sub %>% dplyr::select(.id, date_time, cluster)
-          df6_cluster = rbind(df6_cluster, df6_sub)
-        }
-        shiny::incProgress(2/10,  detail = "Freeze days")
-        # add clusters to df and clean_up
-        df6 = dplyr::left_join(df6, df6_cluster, by = c(".id", "date_time"))
-        rm(df6_sub, df6_cluster, minpoints, size, dist,i)
-        # analysis of freezing data
-        df6 = df6 %>% dplyr::group_by(.id, date) %>% dplyr::mutate(cluster_zero = case_when(
-          min(cluster) == 0 & any(T1_freeze == TRUE) |  any(T1_freeze2 == TRUE) ~ TRUE,
-          TRUE ~ FALSE), cluster_zero2 = case_when(any(T1_freeze == TRUE) ~ TRUE, TRUE ~ FALSE) )%>% dplyr::ungroup()
-        shiny::incProgress(2/10,  detail = "Clean data")
-        # freezing data extraction and interpolation
-        df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::mutate(freeze_show = ifelse(is.na(Radius), Inf, ifelse(cluster_zero == FALSE | is.na(cluster_zero),Radius,NA)),
-                                                             freeze_show2 = ifelse(is.na(Radius), Inf, ifelse(cluster_zero2 == FALSE | is.na(cluster_zero2),Radius,NA))) %>% dplyr::ungroup()
-        # data_db2 = data_db2 %>% mutate(freeze_show = na.spline(freeze_show) + 0*na.approx(freeze_show, na.rm = FALSE), freeze_show2 = na.spline(freeze_show2) + 0*na.approx(freeze_show2, na.rm = FALSE))
-        df6 = as.data.frame(df6 %>% group_by(.id)  %>% dplyr::mutate(freeze_show = na.approx(freeze_show, na.rm = F), freeze_show2 = na.approx(freeze_show2, na.rm = F))%>%
-                              dplyr::mutate(freeze_show = ifelse(freeze_show<=Radius & cluster !=0 | T1_freeze == FALSE , Radius, NA), freeze_show2 = ifelse(freeze_show2<=Radius & cluster != 0 | T1_freeze == FALSE, Radius, NA)) %>%
-                              dplyr::mutate(freeze_show = na.approx(freeze_show, na.rm = F), freeze_show2 = na.approx(freeze_show2, na.rm = F)) %>%
-                              dplyr::mutate(freeze_show = na_if(freeze_show, Inf), freeze_show2 = na_if(freeze_show2, Inf)) %>%
-                              dplyr::mutate(lead_trail1 = na.locf(freeze_show, na.rm = F, fromLast = F), lead_trail2 = na.locf(freeze_show2, na.rm = F, fromLast = F)) %>%
-                              dplyr::mutate(lead_trail1 = na.locf(lead_trail1, na.rm = F, fromLast = T), lead_trail2 = na.locf(lead_trail2, na.rm = F, fromLast = T)) %>%
-                              dplyr::mutate(freeze_show = ifelse(is.na(Radius), NA, ifelse(lead_trail1<=Radius, Radius,lead_trail1 )), freeze_show2 = ifelse(is.na(Radius), NA, ifelse(lead_trail2<=Radius, Radius,lead_trail2 ))) %>%
-                              dplyr::ungroup() %>% dplyr::select(-date,-T1_freeze, -T1_freeze2, -nrow, -cluster, -cluster_zero, -cluster_zero2, -lead_trail1, -lead_trail2))
-        # df = as.data.frame(df %>% group_by(.id) %>% complete(date_time = seq.POSIXt(min(date_time), max(date_time), by="15 min",tz = 'UTC')) %>% arrange(date_time, .by_group = T))
-        shiny::incProgress(2/10,  detail = "Decomposing")
-        # decompose
-        if (input$bar31 == "Raw") {
-          df6 = df6 %>% group_by(.id) %>% mutate(Radius_first = Radius-first(na.omit(Radius)), freeze_show2_first = freeze_show2-first(na.omit(freeze_show2)))
-          df6 = as.data.frame(df6 %>% dplyr::group_by(.id) %>%
-                                dplyr::mutate(
-                                  FREEZE = ifelse(is.na(Radius_first), NA, Radius_first-freeze_show2_first),
-                                  GRO = ifelse(is.na(Radius_first), NA, cummax(ifelse(is.na(Radius_first), -Inf, freeze_show2_first))),
-                                  TWD = ifelse(is.na(Radius_first), NA, freeze_show2_first-GRO)) %>%
-                                dplyr::select(-Radius_first, -freeze_show2_first, -freeze_show, -freeze_show2))
-        } else {
-          df6 = df6 %>% group_by(.id) %>% mutate(Radius_first = Radius-first(na.omit(Radius)), freeze_show_first = freeze_show-first(na.omit(freeze_show)))
-          df6 = as.data.frame(df6 %>% dplyr::group_by(.id) %>%
-                                dplyr::mutate(
-                                  FREEZE = ifelse(is.na(Radius_first), NA, Radius_first-freeze_show_first),
-                                  GRO = ifelse(is.na(Radius_first), NA, cummax(ifelse(is.na(Radius_first), -Inf, freeze_show_first))),
-                                  TWD = ifelse(is.na(Radius_first), NA, freeze_show_first-GRO)) %>%
-                                dplyr::select(-Radius_first, -freeze_show,-freeze_show_first, -freeze_show2))
-        }
-        df = df %>% filter(!.id %in% levels(df6$.id)) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id,date_time)
-        rm(df6)
-        assign('df', df, envir=envir)
-        shiny::incProgress(2/10,  detail = "Done")
+        {
+          if("T1" %in% colnames(d$a)) {
+            shiny::incProgress(2/10, detail = "Filtering freeze days")
+            df6 = isolate(d$a) %>% dplyr::mutate(day_freeze = lubridate:: floor_date(date_time, "day")) %>%
+              dplyr::rename(Variable_freeze_orig = input$variable_prim) %>%
+              dplyr::mutate(GRO_orig = Variable_freeze_orig,
+                            FREEZE = Variable_freeze_orig) %>%
+              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < 0) ~ NA, TRUE ~ GRO_orig)
+                                                   # ,
+                                                    # = case_when(any(T1 < as.numeric(input$freeze_temp_input)) ~ FREEZE, TRUE ~ 0)
+                                                   ) %>%
+              group_by(.id) %>% mutate(GRO_orig = zoo::na.spline(GRO_orig, na.rm = F)) %>%
+              ungroup() %>%
+              mutate(GRO_orig = if_else(is.na(Variable_freeze_orig), NA, GRO_orig)) %>%
+              select(-day_freeze) %>% as.data.frame()
+          } else {
+            shiny::incProgress(2/10, detail = "GRO TWD")
+            df6 = d$a
+          }
+          df6 = df6 %>% mutate(year = lubridate::year(date_time)) %>% dplyr::group_by(.id) %>%
+            dplyr::mutate(GRO = if_else(is.na(GRO_orig), NA , cummax(if_else(is.na(GRO_orig), -Inf, GRO_orig))),
+                          TWD = if_else(is.na(GRO), NA, GRO_orig-GRO),
+                          FREEZE = if_else(is.na(GRO_orig), NA, FREEZE-GRO_orig)) %>%
+            mutate(FREEZE = if_else(FREEZE > 0, 0, FREEZE))%>%
+            dplyr::group_by(year, .add = T) %>%
+            dplyr::mutate(GRO = GRO - first(na.omit(GRO)),
+                          Variable_freeze_orig = Variable_freeze_orig - first(na.omit(Variable_freeze_orig))) %>%
+            dplyr::select(-GRO_orig) %>%
+            plyr::rename(., c("Variable_freeze_orig" = input$variable_prim)) %>% as.data.frame()
+          df = df %>% filter(!.id %in% levels(df6$.id)) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id, date_time) %>% as.data.frame()
+          rm(df6)
+          assign('df', df, envir=envir)
+          shiny::incProgress(2/10,  detail = "Done")
+        # df6 =as.data.frame(isolate(d$a))
+        # df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::filter(!all(is.na(Radius))) %>% droplevels() %>% dplyr::mutate(date = floor_date(date_time, unit = "day")) %>%  dplyr::group_by(.id,date) %>%
+        #   dplyr::mutate(T1_freeze = case_when(
+        #     min(T1) < input$bar33 ~ TRUE,TRUE ~ FALSE),
+        #     T1_freeze2 = case_when(
+        #       min(lag(T1,n = 96)) < -0 ~ TRUE,
+        #       min(T1) < input$bar35 ~ TRUE,
+        #       mean(T1) < input$bar34 & min(T1) < 0 ~ TRUE,
+        #       TRUE ~ FALSE)) %>% dplyr::ungroup()
+        # shiny::incProgress(2/10, detail = "Anomalies")
+        # df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::mutate(nrow = row_number())
+        # # analysing distance and size, change the minpoints to see the effect
+        # minpoints = input$bar32
+        # df6_cluster = data.frame(matrix(ncol = 3, nrow = 0))
+        # colnames(df6_cluster) <- c(".id", "date_time", "cluster")
+        # for(i in levels(df6$.id)){
+        #   df6_sub = droplevels(subset(df6, .id == i, select = c(".id","Radius", "nrow", "date_time")))
+        #   df6_sub = na.omit(df6_sub)
+        #   dist = kNNdist(as.matrix(df6_sub[,c("Radius", "nrow"),]), k = minpoints - 1)
+        #   size = quantile(dist, 0.975)
+        #   # Cluster with the chosen parameters
+        #   res = dbscan(as.matrix(df6_sub[,c("Radius", "nrow"),]), eps = size, minPts = minpoints, borderPoints = F)
+        #   df6_sub$cluster = res$cluster
+        #   df6_sub = df6_sub %>% dplyr::select(.id, date_time, cluster)
+        #   df6_cluster = rbind(df6_cluster, df6_sub)
+        # }
+        # shiny::incProgress(2/10,  detail = "Freeze days")
+        # # add clusters to df and clean_up
+        # df6 = dplyr::left_join(df6, df6_cluster, by = c(".id", "date_time"))
+        # rm(df6_sub, df6_cluster, minpoints, size, dist,i)
+        # # analysis of freezing data
+        # df6 = df6 %>% dplyr::group_by(.id, date) %>% dplyr::mutate(cluster_zero = case_when(
+        #   min(cluster) == 0 & any(T1_freeze == TRUE) |  any(T1_freeze2 == TRUE) ~ TRUE,
+        #   TRUE ~ FALSE), cluster_zero2 = case_when(any(T1_freeze == TRUE) ~ TRUE, TRUE ~ FALSE) )%>% dplyr::ungroup()
+        # shiny::incProgress(2/10,  detail = "Clean data")
+        # # freezing data extraction and interpolation
+        # df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::mutate(freeze_show = ifelse(is.na(Radius), Inf, ifelse(cluster_zero == FALSE | is.na(cluster_zero),Radius,NA)),
+        #                                                      freeze_show2 = ifelse(is.na(Radius), Inf, ifelse(cluster_zero2 == FALSE | is.na(cluster_zero2),Radius,NA))) %>% dplyr::ungroup()
+        # # data_db2 = data_db2 %>% mutate(freeze_show = na.spline(freeze_show) + 0*na.approx(freeze_show, na.rm = FALSE), freeze_show2 = na.spline(freeze_show2) + 0*na.approx(freeze_show2, na.rm = FALSE))
+        # df6 = as.data.frame(df6 %>% group_by(.id)  %>% dplyr::mutate(freeze_show = na.approx(freeze_show, na.rm = F), freeze_show2 = na.approx(freeze_show2, na.rm = F))%>%
+        #                       dplyr::mutate(freeze_show = ifelse(freeze_show<=Radius & cluster !=0 | T1_freeze == FALSE , Radius, NA), freeze_show2 = ifelse(freeze_show2<=Radius & cluster != 0 | T1_freeze == FALSE, Radius, NA)) %>%
+        #                       dplyr::mutate(freeze_show = na.approx(freeze_show, na.rm = F), freeze_show2 = na.approx(freeze_show2, na.rm = F)) %>%
+        #                       dplyr::mutate(freeze_show = na_if(freeze_show, Inf), freeze_show2 = na_if(freeze_show2, Inf)) %>%
+        #                       dplyr::mutate(lead_trail1 = na.locf(freeze_show, na.rm = F, fromLast = F), lead_trail2 = na.locf(freeze_show2, na.rm = F, fromLast = F)) %>%
+        #                       dplyr::mutate(lead_trail1 = na.locf(lead_trail1, na.rm = F, fromLast = T), lead_trail2 = na.locf(lead_trail2, na.rm = F, fromLast = T)) %>%
+        #                       dplyr::mutate(freeze_show = ifelse(is.na(Radius), NA, ifelse(lead_trail1<=Radius, Radius,lead_trail1 )), freeze_show2 = ifelse(is.na(Radius), NA, ifelse(lead_trail2<=Radius, Radius,lead_trail2 ))) %>%
+        #                       dplyr::ungroup() %>% dplyr::select(-date,-T1_freeze, -T1_freeze2, -nrow, -cluster, -cluster_zero, -cluster_zero2, -lead_trail1, -lead_trail2))
+        # # df = as.data.frame(df %>% group_by(.id) %>% complete(date_time = seq.POSIXt(min(date_time), max(date_time), by="15 min",tz = 'UTC')) %>% arrange(date_time, .by_group = T))
+        # shiny::incProgress(2/10,  detail = "Decomposing")
+        # # decompose
+        # if (input$bar31 == "Raw") {
+        #   df6 = df6 %>% group_by(.id) %>% mutate(Radius_first = Radius-first(na.omit(Radius)), freeze_show2_first = freeze_show2-first(na.omit(freeze_show2)))
+        #   df6 = as.data.frame(df6 %>% dplyr::group_by(.id) %>%
+        #                         dplyr::mutate(
+        #                           FREEZE = ifelse(is.na(Radius_first), NA, Radius_first-freeze_show2_first),
+        #                           GRO = ifelse(is.na(Radius_first), NA, cummax(ifelse(is.na(Radius_first), -Inf, freeze_show2_first))),
+        #                           TWD = ifelse(is.na(Radius_first), NA, freeze_show2_first-GRO)) %>%
+        #                         dplyr::select(-Radius_first, -freeze_show2_first, -freeze_show, -freeze_show2))
+        # } else {
+        #   df6 = df6 %>% group_by(.id) %>% mutate(Radius_first = Radius-first(na.omit(Radius)), freeze_show_first = freeze_show-first(na.omit(freeze_show)))
+        #   df6 = as.data.frame(df6 %>% dplyr::group_by(.id) %>%
+        #                         dplyr::mutate(
+        #                           FREEZE = ifelse(is.na(Radius_first), NA, Radius_first-freeze_show_first),
+        #                           GRO = ifelse(is.na(Radius_first), NA, cummax(ifelse(is.na(Radius_first), -Inf, freeze_show_first))),
+        #                           TWD = ifelse(is.na(Radius_first), NA, freeze_show_first-GRO)) %>%
+        #                         dplyr::select(-Radius_first, -freeze_show,-freeze_show_first, -freeze_show2))
+        # }
+        # df = df %>% filter(!.id %in% levels(df6$.id)) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id,date_time)
+        # rm(df6)
+        # assign('df', df, envir=envir)
+        # shiny::incProgress(2/10,  detail = "Done")
         })
     }
 
