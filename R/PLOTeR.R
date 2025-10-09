@@ -247,7 +247,7 @@ PLOTeR = function (){
                                                                                         shinyWidgets::materialSwitch("se_switch_upper_plot","SE",value = T, status = "info", width = "50%"),
                                                                                         shinyWidgets::materialSwitch("regre_switch",HTML(paste0("Regression",tags$sup("beta"))), status = "info")
                                                                        ),
-                                                                       column(10,actionButton(inputId = 'bar6', label = "Subtract offset", width = "100%")),
+                                                                       column(10,actionButton(inputId = 'subtract_upper_plot', label = "Subtract offset", width = "100%")),
                                                                        column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
                                                                        # shinyWidgets::materialSwitch("freeze_switch","Show Freeze", status = "primary", value = F, right = T),
                                                                        # conditionalPanel(condition = "input.freeze_switch == true",
@@ -1369,7 +1369,7 @@ PLOTeR = function (){
     #plot_zooming = function() {
     #dat2 = d()
     #rows = ceiling(length(levels(droplevels(dat2$.id)))/20)
-    #ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+    #ggplot(data = dat2, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
     #geom_line()+
     #teme_bw()+
     #coord_cartesian(xlim = zooming$x, expand = T)+
@@ -1387,16 +1387,16 @@ PLOTeR = function (){
     #plot functions to Input Data tab
     ploter_logo = png::readPNG(system.file("logos/ploter_logo2.png", package = "PLOTeR"))
     empty_plot_1 = function() {
-      ggplot(data = d$a, aes_string(x="date_time", y=NULL))+
+      ggplot(data = d$a, aes(x=!!rlang::sym("date_time"), y=NULL))+
         theme_bw()+
         annotation_raster(ploter_logo, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
     }
     empty_plot_2 = function() {
-      ggplot(data = d$a, aes_string(x="date_time", y=NULL))+
+      ggplot(data = d$a, aes(x=!!rlang::sym("date_time"), y=NULL))+
         theme_bw()
     }
     legend_2 = function() {
-      ggplot(data = d$a, aes_string(x="date_time", y=NULL))
+      ggplot(data = d$a, aes(x=!!rlang::sym("date_time"), y=NULL))
       theme_bw()
     }
     legend_rows <- reactive({
@@ -1415,7 +1415,7 @@ PLOTeR = function (){
       sel = input$table_rows_selected
       dat3 = c[sel,]
       rows = ceiling(length(levels(droplevels(c$.id)))/18)
-      ggplot(data = c, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+      ggplot(data = c, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         geom_line()+
         geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
         theme_bw()+
@@ -1455,7 +1455,7 @@ PLOTeR = function (){
                                                            group_by(date_time) %>%
                                                            summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                                                            as.data.frame(),
-                                                         aes(x=.data[["date_time"]], y=.data[["data_mean"]]))+
+                                                         aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("data_mean")))+
               geom_line(colour = "#3366FF")+
               {if(isTRUE(input$se_switch_upper_plot)){
                 geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
@@ -1463,7 +1463,7 @@ PLOTeR = function (){
                          group_by(!!rlang::sym(input$Groupby_upper_plot),date_time) %>%
                          summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                          as.data.frame(),
-                       aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$Groupby_upper_plot]], fill = .data[[input$Groupby_upper_plot]]))+
+                       aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("data_mean"),colour = !!rlang::sym(input$Groupby_upper_plot), fill = !!rlang::sym(input$Groupby_upper_plot)))+
               geom_line()+
               {if(isTRUE(input$se_switch_upper_plot)){
                 geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
@@ -1474,11 +1474,11 @@ PLOTeR = function (){
             theme(legend.position = "top")+
             ylab(label = input$variable_prim)
         } else {
-          ggplot(data = data_upper_plot, aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
-            {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes(colour=.data[[".id"]]))
+          ggplot(data = data_upper_plot, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim)))+
+            {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes(colour=!!rlang::sym(".id")))
             }else {
               {if(input$Groupby_upper_plot == "none"){geom_smooth(method = input$method_upper_plot, se=input$se_switch_upper_plot)}
-                else{geom_smooth(aes(colour = .data[[input$Groupby_upper_plot]]),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}}}+
+                else{geom_smooth(aes(colour = !!rlang::sym(input$Groupby_upper_plot)),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}}}+
             coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
             theme_bw()+
             # guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
@@ -1506,7 +1506,7 @@ PLOTeR = function (){
                        group_by(date_time) %>%
                        summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                        as.data.frame(),
-                     aes(x=.data[["date_time"]], y=.data[["data_mean"]]))+
+                     aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("data_mean")))+
             geom_line(colour = "#3366FF")+
             {if(isTRUE(input$se_switch_lower_plot)){
               geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, fill = "#3366FF", alpha = .2)}}
@@ -1514,7 +1514,7 @@ PLOTeR = function (){
                         group_by(!!rlang::sym(input$Groupby_lower_plot),date_time) %>%
                         summarise(data_mean = mean(!!rlang::sym(input$variable_prim), na.rm = T), data_se = sd(!!rlang::sym(input$variable_prim), na.rm = T)/sqrt(sum(!is.na(!!rlang::sym(input$variable_prim))))) %>%
                         as.data.frame(),
-                      aes(x=.data[["date_time"]], y=.data[["data_mean"]],colour = .data[[input$Groupby_lower_plot]], fill = .data[[input$Groupby_lower_plot]]))+
+                      aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("data_mean"),colour = !!rlang::sym(input$Groupby_lower_plot), fill = !!rlang::sym(input$Groupby_lower_plot)))+
                 geom_line()+
                 {if(isTRUE(input$se_switch_lower_plot)){
                   geom_ribbon(aes(ymin = data_mean-data_se, ymax = data_mean+data_se), colour = NA, alpha = .2)}}
@@ -1525,11 +1525,11 @@ PLOTeR = function (){
           theme(legend.position = "none")+
           ylab(label = input$variable_prim)
       } else {
-        ggplot(data = data_lower_plot, aes(x=.data[["date_time"]], y=.data[[input$variable_prim]]))+
-          {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes(colour=.data[[".id"]]))
+        ggplot(data = data_lower_plot, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim)))+
+          {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes(colour=!!rlang::sym(".id")))
           }else {
             {if(input$Groupby_lower_plot == "none"){geom_smooth(method = input$method_lower_plot, se=input$se_switch_lower_plot)}
-              else{geom_smooth(aes(colour = .data[[input$Groupby_lower_plot]]),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}}}+
+              else{geom_smooth(aes(colour = !!rlang::sym(input$Groupby_lower_plot)),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}}}+
           #geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
           coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
           theme_bw()+
@@ -1549,10 +1549,10 @@ PLOTeR = function (){
       # dat2 = e()
       # dat3 = dat2[sel,]
       rows = ceiling(length(levels(droplevels(dat2$.id)))/6)
-      ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+      ggplot(data = dat2, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         geom_line()+
         # geom_point(data = dat3,fill = "black", size = 3, alpha= 0.6, show.legend = F)+
-        geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))+
+        geom_line(aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("sec"), colour=!!rlang::sym(".id_sec")))+
         scale_y_continuous(name = input$variable_prim,sec.axis = sec_axis(~.*recal$avar+recal2$bvar, name = input$variable_sec))+
         theme_bw()+
         guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
@@ -1608,19 +1608,19 @@ PLOTeR = function (){
         rows = ceiling(length(levels(droplevels(dat2$.id)))/6)
       }
       if(isTRUE(input$regre_switch) & !is.na(input$variable_sec)){
-        ggplot(data = dat2, aes_string(x=input$variable_prim, y=input$variable_sec))+
+        ggplot(data = dat2, aes(x=!!rlang::sym(input$variable_prim), y=!!rlang::sym(input$variable_sec)))+
           geom_point()+
-          geom_smooth(aes_string(colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot)+
+          geom_smooth(aes(colour = !!rlang::sym(input$Groupby_upper_plot)), method = input$method_upper_plot, se=input$se_switch_upper_plot)+
           theme_classic()
       } else {
-      ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+      ggplot(data = dat2, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         {if(isFALSE(input$group_switch_upper_plot)){geom_line()
         }else {
-          geom_smooth(aes_string(colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}+
+          geom_smooth(aes(colour = !!rlang::sym(input$Groupby_upper_plot)),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}+
         # geom_point(data = dat3,fill = "black", size = 3, alpha= 0.6, show.legend = F)+
-        {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
+        {if(isFALSE(input$group_switch_upper_plot)){geom_line(aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("sec"), colour=!!rlang::sym(".id_sec")))
         }else {
-          geom_smooth(aes_string(y="sec",colour = input$Groupby_upper_plot),method = input$method_upper_plot, se=input$se_switch_upper_plot, linetype = 2)}}+
+          geom_smooth(aes(y=!!rlang::sym("sec"),colour = !!rlang::sym(input$Groupby_upper_plot)),method = input$method_upper_plot, se=input$se_switch_upper_plot, linetype = 2)}}+
         scale_y_continuous(name = input$variable_prim,sec.axis = sec_axis(~.*recal$avar+recal2$bvar, name = ifelse(isTRUE(input$freeze_switch),paste0(input$method3, " freeze_show"), input$variable_sec)))}+
         coord_cartesian(xlim = zooming$x, ylim = zooming$y,expand = T)+
         theme_bw()+
@@ -1639,14 +1639,14 @@ PLOTeR = function (){
       dat2 = e()
       dat3 = dat2[sel,]
       rows = ceiling(length(levels(droplevels(dat2$.id)))/6)
-      ggplot(data = dat2, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+      ggplot(data = dat2, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         {if(isFALSE(input$group_switch_lower_plot)){geom_line()
         }else {
-          geom_smooth(aes_string(colour = input$Groupby_lower_plot),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
+          geom_smooth(aes(colour = !!rlang::sym(input$Groupby_lower_plot)),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
         geom_point(data = dat3,fill = "black", size = 3, alpha= 0.6, show.legend = F)+
-        {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes_string(x="date_time", y="sec", colour=".id_sec"))
+        {if(isFALSE(input$group_switch_lower_plot)){geom_line(aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("sec"), colour=!!rlang::sym(".id_sec")))
         }else {
-          geom_smooth(aes_string(y="sec",colour = input$Groupby_lower_plot),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
+          geom_smooth(aes(y=!!rlang::sym("sec"),colour = !!rlang::sym(input$Groupby_lower_plot)),method = input$method_lower_plot, se=input$se_switch_lower_plot)}}+
         scale_y_continuous(name = input$variable_prim,sec.axis = sec_axis(~.*recal$avar+recal2$bvar, name = input$variable_sec))+
         coord_cartesian(xlim = zooming$x, ylim = zooming$y,expand = T)+
         theme_bw()+
@@ -1737,10 +1737,10 @@ PLOTeR = function (){
         } else {
         c = d$c
       }
-      ggplot(data = c, aes_string(x="date_time", y=input$variable_prim, colour=".id"))+
+      ggplot(data = c, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         geom_line()+
-        geom_vline(aes_string(xintercept = "GS_start"), colour = "green")+
-        geom_vline(aes_string(xintercept = "GS_end"), colour = "red")+
+        geom_vline(aes(xintercept = !!rlang::sym("GS_start")), colour = "green")+
+        geom_vline(aes(xintercept = !!rlang::sym("GS_end")), colour = "red")+
         coord_cartesian(xlim = zooming$x,  ylim = NULL, expand = T)+
         theme_bw()+
         {if(isTRUE(plot_GS$active) & isFALSE(input$GS_switch_plot)){theme(
@@ -1756,12 +1756,12 @@ PLOTeR = function (){
         c = d$c
         c = c %>% dplyr::mutate(GS_end = as.POSIXct(ifelse(is.na(GS_end), NA, GS_end+lubridate::days(14)),origin = '1970-01-01', tz = "UTC")) %>% as.data.frame()
       }
-      ggplot(data = c,aes_string(x="date_time", y="GRO_rate", colour=".id"))+
+      ggplot(data = c,aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("GRO_rate"), colour=!!rlang::sym(".id")))+
         geom_line()+
-        geom_line(aes_string(x="date_time", y="Variable_rate"), colour = "grey", alpha = .4)+
-        geom_line(aes_string(x="date_time", y="model_rate"), colour = "black")+
-        geom_vline(aes_string(xintercept = "GS_start"), colour = "green")+
-        geom_vline(aes_string(xintercept = "GS_end"), colour = "red")+
+        geom_line(aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("Variable_rate")), colour = "grey", alpha = .4)+
+        geom_line(aes(x=!!rlang::sym("date_time"), y=!!rlang::sym("model_rate")), colour = "black")+
+        geom_vline(aes(xintercept = !!rlang::sym("GS_start")), colour = "green")+
+        geom_vline(aes(xintercept = !!rlang::sym("GS_end")), colour = "red")+
         geom_hline(aes(yintercept = 0))+
         coord_cartesian(xlim = zooming$x,  ylim = NULL, expand = T)+
         theme_bw()+
@@ -2036,7 +2036,7 @@ PLOTeR = function (){
           .
         }
       }
-      ggplot(data = plot_prim_cleaner_mode_data, aes_string("date_time", input$variable_prim, colour = ".id")) +
+      ggplot(data = plot_prim_cleaner_mode_data, aes(!!rlang::sym("date_time"), !!rlang::sym(input$variable_prim), colour = !!rlang::sym(".id"))) +
         geom_line()+
       # change7----
       # {if(isFALSE(input$fine_mode)){{if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}}
@@ -2503,7 +2503,7 @@ observe({
     observeEvent(input$bar17, {
       showModal(modalDialog(
         title = "Subset data?",
-        HTML("Would you like to continue with selected data only?"),
+        HTML("Would you like to continue with selected ID's (.id) and time period only?"),
         easyClose = TRUE,
         footer = tagList(
           modalButton("Cancel"),
@@ -2569,35 +2569,34 @@ observe({
           shiny::incProgress(2/10)
         })
     })
-    offst  = function() {
+    offst_upper  = function() {
       if(is.null(zooming$x)){
-        # d$a = ddply(isolate(d$a), c('.id'), transform, Radius = Radius-first(na.omit(Radius)))
-        dat4 = isolate(d$a)
-        dat4 = as.data.frame(dat4 %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim))))%>% select(-!!rlang::sym(input$variable_prim)))
-        names(dat4)[names(dat4) == "newVar"] <- paste(input$variable_prim)
-        d$a <- dat4
-        rm(dat4)
+        dat4_upper = isolate(d$a)
+        dat4_upper = dat4_upper %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim)))) %>% select(-!!rlang::sym(input$variable_prim)) %>% as.data.frame()
+        names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
+        d$a <- dat4_upper
+        rm(dat4_upper)
         return(d$a)
       } else {
-        dat4 = subset(isolate(d$a),date_time >= zooming$x[1] & date_time <= zooming$x[2])
-        dat4 = as.data.frame(dat4 %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim))))%>% select(-!!rlang::sym(input$variable_prim)))
-        names(dat4)[names(dat4) == "newVar"] <- paste(input$variable_prim)
-        d$a <- dat4
-        rm(dat4)
+        dat4_upper = subset(isolate(d$a),date_time >= zooming$x[1] & date_time <= zooming$x[2])
+        dat4_upper = as.data.frame(dat4_upper %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim))))%>% select(-!!rlang::sym(input$variable_prim)))
+        names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
+        d$a <- dat4_upper
+        rm(dat4_upper)
         return(d$a)
       }
     }
-    observeEvent(input$bar6, {
+    observeEvent(input$subtract_upper_plot, {
       if(length(levels(d$a[['.id']]))>1 && isTRUE(input$one_by_one_switch)){
         showModal(modalDialog(
-          'Note that any changes in Data tab will reset offset.',
+          'Note that any change in Data tab will reset offset.',
           easyClose = T,
           footer = NULL
         ))
-        offst()
+        offst_upper()
       } else {
         showModal(modalDialog(
-          'Select more than one sensor.',
+          'Select more than one sensor in Data tab.',
           easyClose = T,
           footer = NULL
         ))
