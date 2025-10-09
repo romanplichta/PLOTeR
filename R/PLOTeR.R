@@ -100,6 +100,7 @@ PLOTeR = function (){
                                              actionButton("bar43", "Append data", class = "btn-danger"),
                                              actionButton("bar19", "Change interval", class = "btn-danger"),
                                              actionButton("bar17", "Subset data", class = "btn-danger"),
+                                             actionButton("bar45", "Drop variable", class = "btn-danger"),
                                              align = "center", style = "margin-bottom: 0px;", style = "margin-top: 9px;",style = "margin-left: 10px;")
 
                                # column(12,
@@ -1317,26 +1318,6 @@ PLOTeR = function (){
         }
       }
     })
-    # plot_brushed_points_data = reactive({
-    #   if(is.null(sele_prim())){
-    #     return(NULL)
-    #   } else {
-    #     if(isFALSE(input$one_by_one_switch)){
-    #       res <- brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time")
-    #       return(res)
-    #     } else {
-    #       res <- brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time")
-    #       return(res)
-    #     }
-    #   }
-    # }) %>% debounce(1000)
-    # output$plot_brushed_points <- renderDataTable({
-    #   if(is.null(sele_prim())){
-    #     return(NULL)}else{
-    #       datatable(plot_brushed_points_data())
-    #     }
-    # })
-
     #plots_functions ----
     #inputs for exported plots
     plot_export_funct = function(){
@@ -1383,26 +1364,17 @@ PLOTeR = function (){
         zooming$y <- NULL
       }
     })
-    #zooming <- reactiveValues(x = NULL, y = NULL)
-    #zooming using brush, dblclck refresh
-    #plot_zooming = function() {
-    #dat2 = d()
-    #rows = ceiling(length(levels(droplevels(dat2$.id)))/20)
-    #ggplot(data = dat2, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
-    #geom_line()+
-    #teme_bw()+
-    #coord_cartesian(xlim = zooming$x, expand = T)+
-    #guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
-    #theme(legend.position="top")
-    #}
     # numeric input to manually change legend rows
     output$legend_val = renderUI({
       if(input$one_by_one_switch){
-        tags$div(class="inline",numericInput("legend_value", "rows: ", min = 1, max = 30, step = 1, width = "8%",value = ceiling(length(levels(droplevels(df$.id)))/18)))
+        tags$div(class="inline",numericInput("legend_value", "legend rows:", value = legend_rows(), min   = 1, max = max(legend_rows() * 3, 30), step  = 1,width = "8%"))
       } else {
-        tags$div(class="inline",numericInput("legend_value", "rows: ", min = 1, max = 30, step = 1, width = "8%",value = 1))
+        tags$div(class="inline",numericInput("legend_value", "legend rows: ", min = 1, max = 30, step = 1, width = "8%", value = 1))
       }
     })
+    observeEvent(legend_rows(), {
+      updateNumericInput(session, "legend_value", value = legend_rows())
+    }, ignoreInit = TRUE)
     #plot functions to Input Data tab
     ploter_logo = png::readPNG(system.file("logos/ploter_logo2.png", package = "PLOTeR"))
     empty_plot_1 = function() {
@@ -1418,22 +1390,31 @@ PLOTeR = function (){
       ggplot(data = d$a, aes(x=!!rlang::sym("date_time"), y=NULL))
       theme_bw()
     }
+
     legend_rows <- reactive({
-      if(is.null(input$legend_value) & isTRUE(input$one_by_one_switch)){
-        ceiling(length(levels(droplevels(df$.id)))/18)
+      dat <- plot_plot_data()
+      req(nrow(dat) > 0)
+      grp_col <- if (isFALSE(input$group_switch_upper_plot) || input$Groupby_upper_plot == "none") {
+        ".id"
       } else {
-        if(isFALSE(input$one_by_one_switch)){
-          return(1)
-        } else {
-          input$legend_value
-        }
+        input$Groupby_upper_plot
       }
+      if (!grp_col %in% names(dat)) return(1L)
+      n_groups <- nlevels(droplevels(factor(dat[[grp_col]])))
+      max(1L, ceiling(n_groups/18L))
     }) %>% debounce(1000)
     plot_data_plot = function() {
       c = d$a
       sel = input$table_rows_selected
       dat3 = c[sel,]
-      rows = ceiling(length(levels(droplevels(c$.id)))/18)
+      if(isFALSE(input$group_switch_upper_plot)){rows = ceiling(length(levels(droplevels(c$.id)))/18)}
+      else{
+        if(input$Groupby_upper_plot == "none"){
+          rows = 1
+        }else{
+          rows = ceiling(length(levels(droplevels(c[[input$Groupby_upper_plot]])))/18)
+        }
+      }
       ggplot(data = c, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
         geom_line()+
         geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
@@ -1452,7 +1433,7 @@ PLOTeR = function (){
       return(c)
     })
     plot_upper_plot = function(){
-        rows = input$legend_value
+        rows <- if (!is.null(input$legend_value)) input$legend_value else legend_rows()
         data_upper_plot <- plot_plot_data() %>% {
           if (input$upper_plot_interval_input == "original") {
             .
@@ -1489,7 +1470,7 @@ PLOTeR = function (){
           }}+
             coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
             theme_bw()+
-            # guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            guides(shape = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
             theme(legend.position = "top")+
             ylab(label = input$variable_prim)
         } else {
@@ -1500,7 +1481,7 @@ PLOTeR = function (){
                 else{geom_smooth(aes(colour = !!rlang::sym(input$Groupby_upper_plot)),method = input$method_upper_plot, se=input$se_switch_upper_plot)}}}}+
             coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
             theme_bw()+
-            # guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
+            guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
             theme(legend.position = "top")}
       }
     plot_lower_plot = function() {
@@ -2351,7 +2332,6 @@ observe({
       if(is.null(input$.id)|is.null(input$variable_prim)){
         grid.newpage()
       } else {
-        # legend <- cowplot::get_legend(plot_upper_plot())
         legend = cowplot::get_plot_component(plot_upper_plot(), 'guide-box-top', return_all = TRUE)
         grid.newpage()
         grid.draw(legend)
@@ -2545,6 +2525,32 @@ observe({
       removeModal()
       shiny::incProgress(4/10, detail = "done")
       updateCheckboxInput(session, "bar", value = F)
+        })
+    })
+    observeEvent(input$bar45, {
+      showModal(modalDialog(
+        title = "Drop variable?",
+        HTML("Would you like to delete variable from data?"),
+        selectInput("input45", "Drop variable:", choices = names(df)[sapply(df, is.numeric)], selected = NULL, selectize = F),
+        easyClose = TRUE,
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton("ok_bar45", "OK")
+        )
+      ))
+    })
+    observeEvent(input$ok_bar45, {
+      shiny::withProgress(
+        message = paste0("Processing..."),
+        value = 0,
+        {
+          shiny::incProgress(3/10, detail = "removing variable")
+          df = df %>% dplyr::select(-all_of(input$input45))
+          shiny::incProgress(3/10, detail = "assigning data")
+          assign('df', df, envir = envir)
+          d$b <- df
+          removeModal()
+          shiny::incProgress(4/10, detail = "done")
         })
     })
     #output$dynamicInput4 <- renderUI({
@@ -3607,9 +3613,10 @@ observe({
             dplyr::group_by(year, .add = T) %>%
             dplyr::mutate(GRO = GRO - first(na.omit(GRO)),
                           Variable_freeze_orig = Variable_freeze_orig - first(na.omit(Variable_freeze_orig))) %>%
-            dplyr::select(-GRO_orig) %>%
+            dplyr::ungroup() %>%
+            dplyr::select(-GRO_orig, -year) %>%
             plyr::rename(., c("Variable_freeze_orig" = input$variable_prim)) %>% as.data.frame()
-          df = df %>% filter(!.id %in% levels(df6$.id)) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id, date_time) %>% as.data.frame()
+          df = df %>% dplyr::anti_join(df6, by = c(".id", "date_time")) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id, date_time) %>% as.data.frame()
           rm(df6)
           assign('df', df, envir=envir)
           shiny::incProgress(2/10,  detail = "Done")
