@@ -283,7 +283,9 @@ PLOTeR = function (){
                                                                                               selectInput("method_lower_plot", "Method",c("auto", "lm", "glm", "gam", "mean"),
                                                                                                           selected = "auto"),
                                                                                               shinyWidgets::materialSwitch("se_switch_lower_plot","SE",value = T, status = "info", width = "50%")
-                                                                             )
+                                                                             ),
+                                                                             column(10,actionButton(inputId = 'subtract_lower_plot', label = "Subtract offset", width = "100%")),
+                                                                             column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary"))
                                                                       )
                                                                     )))
                                              )
@@ -2570,20 +2572,65 @@ observe({
         })
     })
     offst_upper  = function() {
-      if(is.null(zooming$x)){
-        dat4_upper = isolate(d$a)
-        dat4_upper = dat4_upper %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim)))) %>% select(-!!rlang::sym(input$variable_prim)) %>% as.data.frame()
+      if(!is.null(input$RadiusPlot_brush)){
+        brush_min = input$RadiusPlot_brush$xmin
+        # as.POSIXct(brush$xmin,origin = "1970-01-01 00:00:00 UTC")
+        dat4_upper = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>%
+          dplyr::rename(newVar = input$variable_prim) %>%
+          mutate(newVar = newVar - first(newVar[date_time >= brush_min[1] & !is.na(newVar)], default = NA_real_)) %>%
+          as.data.frame()
         names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
         d$a <- dat4_upper
         rm(dat4_upper)
         return(d$a)
-      } else {
-        dat4_upper = subset(isolate(d$a),date_time >= zooming$x[1] & date_time <= zooming$x[2])
-        dat4_upper = as.data.frame(dat4_upper %>% group_by(.id) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim))))%>% select(-!!rlang::sym(input$variable_prim)))
-        names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
-        d$a <- dat4_upper
-        rm(dat4_upper)
+      }else{
+        if(is.null(zooming$x)){
+          dat4_upper = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim)))) %>% select(-!!rlang::sym(input$variable_prim)) %>% as.data.frame()
+          names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
+          d$a <- dat4_upper
+          rm(dat4_upper)
+          return(d$a)
+        } else {
+          dat4_upper = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>%
+            dplyr::rename(newVar = input$variable_prim) %>%
+            mutate(newVar = newVar - first(newVar[date_time >= zooming$x[1] & !is.na(newVar)], default = NA_real_)) %>%
+            as.data.frame()
+          names(dat4_upper)[names(dat4_upper) == "newVar"] <- paste(input$variable_prim)
+          d$a <- dat4_upper
+          rm(dat4_upper)
+          return(d$a)
+        }
+      }
+    }
+    offst_lower  = function() {
+      if(!is.null(input$RadiusPlot_brush)){
+        brush_min = input$RadiusPlot_brush$xmin
+        # as.POSIXct(brush$xmin,origin = "1970-01-01 00:00:00 UTC")
+        dat4_lower = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>%
+          dplyr::rename(newVar = input$variable_prim) %>%
+          mutate(newVar = newVar - first(newVar[date_time >= brush_min[1] & !is.na(newVar)], default = NA_real_)) %>%
+          as.data.frame()
+        names(dat4_lower)[names(dat4_lower) == "newVar"] <- paste(input$variable_prim)
+        d$a <- dat4_lower
+        rm(dat4_lower)
         return(d$a)
+      }else{
+        if(is.null(zooming$x)){
+          dat4_lower = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>% mutate(newVar = !!rlang::sym(input$variable_prim)-first(na.omit(!!rlang::sym(input$variable_prim)))) %>% select(-!!rlang::sym(input$variable_prim)) %>% as.data.frame()
+          names(dat4_lower)[names(dat4_lower) == "newVar"] <- paste(input$variable_prim)
+          d$a <- dat4_lower
+          rm(dat4_lower)
+          return(d$a)
+        } else {
+          dat4_lower = isolate(d$a) %>% group_by(.id) %>% arrange(date_time, .by_group = TRUE) %>%
+            dplyr::rename(newVar = input$variable_prim) %>%
+            mutate(newVar = newVar - first(newVar[date_time >= zooming$x[1] & !is.na(newVar)], default = NA_real_)) %>%
+            as.data.frame()
+          names(dat4_lower)[names(dat4_lower) == "newVar"] <- paste(input$variable_prim)
+          d$a <- dat4_lower
+          rm(dat4_lower)
+          return(d$a)
+        }
       }
     }
     observeEvent(input$subtract_upper_plot, {
@@ -2594,6 +2641,22 @@ observe({
           footer = NULL
         ))
         offst_upper()
+      } else {
+        showModal(modalDialog(
+          'Select more than one sensor in Data tab.',
+          easyClose = T,
+          footer = NULL
+        ))
+      }
+    })
+    observeEvent(input$subtract_lower_plot, {
+      if(length(levels(d$a[['.id']]))>1 && isTRUE(input$one_by_one_switch)){
+        showModal(modalDialog(
+          'Note that any change in Data tab will reset offset.',
+          easyClose = T,
+          footer = NULL
+        ))
+        offst_lower()
       } else {
         showModal(modalDialog(
           'Select more than one sensor in Data tab.',
