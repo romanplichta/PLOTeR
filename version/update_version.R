@@ -1,7 +1,7 @@
 library(desc)
 descript <- desc::desc(file = "DESCRIPTION")
 # descript$set("Version", app_version)
-descript$set("Version", "1.0.7")
+descript$set("Version", "1.1.0")
 descript$write()
 rm(descript)
 usethis::use_build_ignore(c("version"))

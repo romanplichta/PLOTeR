@@ -1,6 +1,6 @@
 Package: PLOTeR
 Title: Web application for time series data visualization and processing.
-Version: 1.0.7
+Version: 1.1.0
 Authors@R: 
     person("Roman", "Plichta", , "roman.plichta@mendelu.cz", role = c("aut", "cre"),
            comment = c(ORCID = "https://orcid.org/0000-0003-2442-8522"))
