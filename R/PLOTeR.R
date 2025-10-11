@@ -96,11 +96,13 @@ PLOTeR = function (){
                                              textOutput("SliderText")),
                                              style = "margin-left: 50px; margin-right: 50px;"),
                              fluidRow(column(12,
-                                             # actionButton("goButton", "Render plot", class = "btn-primary"),
+                                             actionButton("goButton", "Preview", class = "btn-primary"),
                                              actionButton("bar43", "Append data", class = "btn-danger"),
                                              actionButton("bar19", "Change interval", class = "btn-danger"),
                                              actionButton("bar17", "Subset data", class = "btn-danger"),
                                              actionButton("bar45", "Drop variable", class = "btn-danger"),
+                                             selectInput("variable_prim_dat", "Variable:",""),
+                                             uiOutput(outputId = "dynamicInput"),
                                              align = "center", style = "margin-bottom: 0px;", style = "margin-top: 9px;",style = "margin-left: 10px;")
 
                                # column(12,
@@ -124,11 +126,12 @@ PLOTeR = function (){
 
                              ),
                              fluidRow(uiOutput(outputId = 'multifilter2')
-                             ),
-                             fluidRow(
-                               h3(textOutput("caption")),
-                               dataTableOutput("table"),
-                               align = "center", style = "margin-left: 10px; margin-right: 10px;")
+                             )
+                             # ,
+                             # fluidRow(
+                             #   h3(textOutput("caption")),
+                             #   dataTableOutput("table"),
+                             #   align = "center", style = "margin-left: 10px; margin-right: 10px;")
                     ),
                     #tabpanel_Plot ----
                     tabPanel("Plot",
@@ -322,6 +325,7 @@ PLOTeR = function (){
                              fluidPage(
                                fluidRow(align = "center",
                                         uiOutput(outputId = 'legend_sizable')),
+                               fluidRow(uiOutput(outputId = "dynamicInput")),
                                fluidRow(uiOutput(outputId = "dynamicInput_upperplot")),
                                fluidRow(uiOutput(outputId = 'dynamicInput_lowerplot')),
                                fluidRow(align = "center",
@@ -621,6 +625,13 @@ PLOTeR = function (){
     f <- reactive({
       f_col = colnames(Filter(is.numeric, select_if(d$a,function(x){!all(is.na(x))})))
     })
+    sele_prim_dat <- reactive({
+      if(input$variable_prim_dat %in% f()){
+        return(input$variable_prim_dat)
+      } else {
+        return(NULL)
+      }
+    })
     sele_prim <- reactive({
       if(input$variable_prim %in% f()){
         return(input$variable_prim)
@@ -661,6 +672,10 @@ PLOTeR = function (){
 
     })
     #dynamic input for primary axis
+    observe({
+      updateSelectInput(session, "variable_prim_dat",
+                        choices = f(), selected = sele_prim_dat())
+    })
     observe({
       updateSelectInput(session, "variable_prim",
                         choices = f(), selected = sele_prim())
@@ -1432,20 +1447,11 @@ PLOTeR = function (){
       max(1L, ceiling(n_groups/18L))
     }) %>% debounce(1000)
     plot_data_plot = function() {
-      c = d$a
-      sel = input$table_rows_selected
-      dat3 = c[sel,]
-      if(isFALSE(input$group_switch_upper_plot)){rows = ceiling(length(levels(droplevels(c$.id)))/18)}
-      else{
-        if(input$Groupby_upper_plot == "none"){
-          rows = 1
-        }else{
-          rows = ceiling(length(levels(droplevels(c[[input$Groupby_upper_plot]])))/18)
-        }
-      }
-      ggplot(data = c, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim), colour=!!rlang::sym(".id")))+
+      c = d$a %>% dplyr::group_by(., .id) %>%
+        dplyr::filter(lubridate::hour(date_time) == 0 & lubridate::minute(date_time) == 0)
+      rows = ceiling(length(levels(droplevels(c[[".id"]])))/18)
+      ggplot(data = c, aes(x=!!rlang::sym("date_time"), y=!!rlang::sym(input$variable_prim_dat), colour=!!rlang::sym(".id")))+
         geom_line()+
-        geom_point(data = dat3, fill = "black",size = 3, stroke = 1,alpha= 0.6, show.legend = F)+
         theme_bw()+
         guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
         theme(legend.position = "top")
@@ -2488,15 +2494,15 @@ observe({
     })
     #plot output function
     plot_appear_1 = function () {
-    #   if (is.null(input$.id)|is.null(input$variable_prim)){
+      if (is.null(input$.id)|is.null(input$variable_prim)){
         empty_plot_1()
-    #   } else {
+      } else {
     #     if (is.null(input$variable_sec)|isFALSE(input$sec_ax)){
-    #       plot_data_plot()
+          plot_data_plot()
     #     } else {
     #       plot_sec_axis_1()
     #     }
-    #   }
+      }
     }
     # plot_appear_2 = function () {
     #   if (is.null(input$.id)|is.null(input$variable_prim)){
@@ -2553,7 +2559,7 @@ observe({
     # Plot_output ----
     # input data plot
     output$Data_tab_plot <- renderPlot({
-      # input$goButton
+      input$goButton
       isolate(plot_appear_1())
     })
     output$Plot_tab_upper_plot <- renderPlot({
