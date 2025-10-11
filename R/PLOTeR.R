@@ -1437,31 +1437,12 @@ PLOTeR = function (){
     # repeated invalidations with identical keys don’t rebuild the plot
     upper_plot_obj <- reactive({
       plot_upper_plot()
-<<<<<<< HEAD
     }) %>%
       bindEvent(
         input$navbar,
         input$one_by_one_group_select,
         ignoreInit = T
       )
-=======
-    })
-    # %>%
-    #   bindEvent(
-    #     input$navbar,
-    #     input$variable_prim,
-    #     input$upper_plot_interval_input,
-    #     input$group_switch_upper_plot,
-    #     input$Groupby_upper_plot,
-    #     input$method_upper_plot,
-    #     input$se_switch_upper_plot,
-    #     input$one_by_one_switch,
-    #     input$one_by_one_group_select,
-    #     input$legend_value,
-    #     zooming$x, zooming$y,
-    #     ignoreInit = T
-    #   )
->>>>>>> bd2ffb53c949f6fda25ebf7b7016917edb059126
     plot_upper_plot = function(){
         rows <- if (!is.null(input$legend_value)) input$legend_value else legend_rows()
         data_upper_plot <- plot_plot_data() %>% {
