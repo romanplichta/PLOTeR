@@ -2487,9 +2487,9 @@ observe({
       d$c = NULL
     })
     #plot output function
-    # plot_appear_1 = function () {
+    plot_appear_1 = function () {
     #   if (is.null(input$.id)|is.null(input$variable_prim)){
-    #     empty_plot_1()
+        empty_plot_1()
     #   } else {
     #     if (is.null(input$variable_sec)|isFALSE(input$sec_ax)){
     #       plot_data_plot()
@@ -2497,7 +2497,7 @@ observe({
     #       plot_sec_axis_1()
     #     }
     #   }
-    # }
+    }
     # plot_appear_2 = function () {
     #   if (is.null(input$.id)|is.null(input$variable_prim)){
     #     empty_plot_2()
@@ -2551,11 +2551,11 @@ observe({
       legend
     }
     # Plot_output ----
-    #input data plot
-    # output$Data_tab_plot <- renderPlot({
-    #   input$goButton
-    #   isolate(plot_appear_1())
-    # })
+    # input data plot
+    output$Data_tab_plot <- renderPlot({
+      # input$goButton
+      isolate(plot_appear_1())
+    })
     output$Plot_tab_upper_plot <- renderPlot({
       req(input$navbar == "Plot")
       if (is.null(input$.id)|is.null(input$variable_prim)){
