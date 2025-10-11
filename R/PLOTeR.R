@@ -1301,10 +1301,10 @@ PLOTeR = function (){
     #date_time slider output
     output$range <- renderPrint({ input$slider2 })
     # tables ----
-    output$table <- renderDataTable({
-      input$goButton
-      isolate(as.data.frame(d$a))
-    }, selection = "multi")
+    # output$table <- renderDataTable({
+    #   input$goButton
+    #   isolate(as.data.frame(d$a))
+    # }, selection = "multi")
 
     #generate an HTML table of brushed points
     output$plot_brushed_points <- renderDataTable({
@@ -2487,17 +2487,17 @@ observe({
       d$c = NULL
     })
     #plot output function
-    plot_appear_1 = function () {
-      if (is.null(input$.id)|is.null(input$variable_prim)){
-        empty_plot_1()
-      } else {
-        if (is.null(input$variable_sec)|isFALSE(input$sec_ax)){
-          plot_data_plot()
-        } else {
-          plot_sec_axis_1()
-        }
-      }
-    }
+    # plot_appear_1 = function () {
+    #   if (is.null(input$.id)|is.null(input$variable_prim)){
+    #     empty_plot_1()
+    #   } else {
+    #     if (is.null(input$variable_sec)|isFALSE(input$sec_ax)){
+    #       plot_data_plot()
+    #     } else {
+    #       plot_sec_axis_1()
+    #     }
+    #   }
+    # }
     # plot_appear_2 = function () {
     #   if (is.null(input$.id)|is.null(input$variable_prim)){
     #     empty_plot_2()
@@ -2552,10 +2552,10 @@ observe({
     }
     # Plot_output ----
     #input data plot
-    output$Data_tab_plot <- renderPlot({
-      input$goButton
-      isolate(plot_appear_1())
-    })
+    # output$Data_tab_plot <- renderPlot({
+    #   input$goButton
+    #   isolate(plot_appear_1())
+    # })
     output$Plot_tab_upper_plot <- renderPlot({
       req(input$navbar == "Plot")
       if (is.null(input$.id)|is.null(input$variable_prim)){
