@@ -70,7 +70,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage(paste0("PLOTeR ", desc::desc(file = "DESCRIPTION")$get("Version")), position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", "1.0.7"), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -139,16 +139,6 @@ PLOTeR = function (){
                                                                     status = "danger",
                                                                     circle = FALSE,
                                                                     icon = icon("stats", lib = "glyphicon"),
-
-                                                                    fluidRow(
-                                                                      column(12,actionButton(inputId = 'bar8', label = 'Auto level-up', width = '100%'))
-                                                                    ),
-                                                                    fluidRow(
-                                                                      column(12,actionButton(inputId = 'bar9', label = 'Level-up', width = '100%'))
-                                                                    ),
-                                                                    fluidRow(
-                                                                      column(12,actionButton(inputId = 'bar15', label = 'Interpolation', width = '100%'))
-                                                                    ),
                                                                     # fluidRow(
                                                                     #   column(12,actionButton(inputId = 'bar29', label = 'Freeze subtract', width = '100%'))
                                                                     # ),
@@ -160,14 +150,31 @@ PLOTeR = function (){
                                                                     )
                                                  )),
                                                  div(style = "width: 5px;"),
+                                                 div(shinyWidgets::dropdownButton(label = 'Edit',
+                                                                                  status = "danger",
+                                                                                  circle = FALSE,
+                                                                                  icon = icon("stats", lib = "glyphicon"),
+                                                                                  fluidRow(
+                                                                                    column(12,actionButton(inputId = 'bar8', label = 'Auto level-up', width = '100%'))
+                                                                                  ),
+                                                                                  fluidRow(
+                                                                                    column(12,actionButton(inputId = 'bar9', label = 'Level-up', width = '100%'))
+                                                                                  ),
+                                                                                  fluidRow(
+                                                                                    column(12,actionButton(inputId = 'bar15', label = 'Interpolate', width = '100%'))
+                                                                                  ),
+                                                                                  fluidRow(
+                                                                                    column(12,actionButton(inputId = 'bar16', label = 'Move-up', width = '100%'))
+                                                                                  ),
+                                                                                  fluidRow(
+                                                                                    column(12,actionButton("bar5", "Delete", width = '100%')
+                                                                                    ))
+                                                 )),
+                                                 div(style = "width: 5px;"),
                                                  div(shinyWidgets::dropdownButton(label = 'Data',
                                                                     status = "danger",
                                                                     circle = FALSE,
                                                                     icon = icon("stats", lib = "glyphicon"),
-
-                                                                    fluidRow(
-                                                                      column(12,actionButton(inputId = 'bar16', label = 'Move-up', width = '100%'))
-                                                                    ),
                                                                     fluidRow(
                                                                       column(12,actionButton("bar10", "Subtract offset", width = '100%')
                                                                       )),
@@ -176,11 +183,6 @@ PLOTeR = function (){
                                                                     #   )),
                                                                     fluidRow(
                                                                       column(12,actionButton("bar14", "Append data", width = '100%')
-                                                                      )),
-                                                                    fluidRow(
-                                                                      #column(1,checkboxInput("bar4","Delete enable")),
-                                                                      #column(11,uiOutput(outputId = 'dynamicInput4')),
-                                                                      column(12,actionButton("bar5", "Delete selected data", width = '100%')
                                                                       )),
                                                                     fluidRow(
                                                                       column(12,actionButton("bar11", "Subset data", width = '100%')
@@ -195,7 +197,7 @@ PLOTeR = function (){
                                                                       column(12,actionButton("remove_stair_action", "Remove stairs", width = '100%')
                                                                       )),
                                                                     fluidRow(
-                                                                      column(12,actionButton("Reconstruct_action",  HTML(paste0("Reconstruct",tags$sup("beta"))), width = '100%')
+                                                                      column(12,actionButton("Reconstruct_action",  HTML(paste0("Remove noise",tags$sup("beta"))), width = '100%')
                                                                       ))
 
                                                  )),
@@ -986,7 +988,7 @@ PLOTeR = function (){
             mutate(GRO = if_else(is.na(GRO) & date_time < first(na.omit(GS_start)), 0, if_else(is.na(GRO),NA ,cummax(if_else(is.na(GRO), -Inf, GRO))))) %>%
             mutate(GRO_rate = (GRO - dplyr::lag(GRO,14))/14) %>%
             mutate(GRO_rate = if_else(GRO_rate < input$no_growth_thr, 0, GRO_rate)) %>%
-            mutate(GRO_upp_thr = input$upper_gro_thr*min_max(GRO, "max"))
+            mutate(GRO_upp_thr = (input$upper_gro_thr*0.01)*min_max(GRO, "max"))
           rm(data_start)
           data_fit = data_fit %>% tidyr::drop_na(GRO_rate) %>% droplevels() %>% dplyr::group_by(.id, year) %>%
             # gam model with default k value
@@ -1765,11 +1767,11 @@ PLOTeR = function (){
         geom_hline(aes(yintercept = 0))+
         coord_cartesian(xlim = zooming$x,  ylim = NULL, expand = T)+
         theme_bw()+
-        theme(legend.position = "none")
-        # {if(isTRUE(plot_GS$active) & isTRUE(input$GS_switch_plot)){theme(
-        #   panel.background = element_rect(fill = "grey95"),
-        #   panel.grid = element_blank())
-        # }}
+        theme(legend.position = "none")+
+        {if(isTRUE(plot_GS$active) & isTRUE(input$GS_switch_plot)){theme(
+          panel.background = element_rect(fill = "grey95"),
+          panel.grid = element_blank())
+        }}
     }
     ampl <- function(x){
       min_max(x,method = "max")-min_max(x, method = "min")
@@ -3311,15 +3313,15 @@ observe({
         {shiny::incProgress(2/10)
           if(input$bar21 == "first"){
             meta_interval = isolate(df_meta())
-            df = df %>% dplyr::group_by(.id) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
-              dplyr::group_by(.id, date_time) %>% dplyr::summarise_if(is.numeric, ~first(na.omit(.))) %>% dplyr::ungroup() %>%
+            df = df %>% dplyr::group_by(.id) %>% dplyr::arrange(date_time, .by_group = T) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
+              dplyr::group_by(.id, date_time) %>% dplyr::filter(row_number()==1) %>% dplyr::ungroup() %>%
               dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA)) %>%
               dplyr::left_join(meta_interval, by = ".id")
           } else {
             if(input$bar21 == "last"){
               meta_interval = isolate(df_meta())
               df = df %>% dplyr::group_by(.id) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
-                dplyr::group_by(.id, date_time) %>% dplyr::summarise_if(is.numeric, ~last(na.omit(.))) %>% dplyr::ungroup() %>%
+                dplyr::group_by(.id, date_time) %>% dplyr::filter(row_number()==n()) %>% dplyr::ungroup() %>%
                 dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA)) %>%
                 dplyr::left_join(meta_interval, by = ".id")
             } else {
@@ -3791,7 +3793,7 @@ observe({
     }
     observeEvent(input$Reconstruct_action, {
       showModal(modalDialog(
-        title = "Reconstruct dendrometer data affected by humidity?",
+        title = "Remove noise from data?",
         br(),
         br(),
         selectInput("bar40", "Remove jumps:", choices = c("lower", "upper"),  selected = "lower"),
