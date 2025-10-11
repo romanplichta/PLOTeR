@@ -1322,23 +1322,66 @@ PLOTeR = function (){
     })
     #plots_functions ----
     #inputs for exported plots
-    plot_export_funct = function(){
-      if(isTRUE(input$legend_switch)){
-        if(isTRUE(input$lower_plot_switch)){
-          grid.arrange(legend_appear_2(),plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(.4 * legend_rows(),2,2))
+    lower_plot_dispatch <- function() {
+      if (isTRUE(plot_GS$active)) {
+        plot_prim_down_GS()
+      } else {
+        lower_plot_obj()
+      }
+    }
+    legend_grob <- function() {
+      p <- upper_plot_obj() + theme(legend.position = "top")
+      cowplot::get_legend(p)   # returns a grob; no drawing here
+    }
+    plot_export_funct <- function() {
+      p_upper <- upper_plot_obj()
+      p_lower <- if (isTRUE(input$lower_plot_switch)) lower_plot_dispatch() else NULL
+      if (isTRUE(input$legend_switch)) {
+        leg <- legend_grob()
+        up  <- p_upper + theme(legend.position = "none")
+        lo  <- if (!is.null(p_lower)) p_lower + theme(legend.position = "none") else NULL
+        if (!is.null(lo)) {
+          gridExtra::grid.arrange(
+            grobs    = list(leg, up, lo),
+            ncol     = 1,
+            heights  = c(.4 * legend_rows(), 2, 2))
         } else {
-          #plot_zooming()
-          grid.arrange(legend_appear_2(), plot_appear_2(), ncol = 1, heights = c(.4 * legend_rows(),2))
+          gridExtra::grid.arrange(
+            grobs    = list(leg, up),
+            ncol     = 1,
+            heights  = c(.4 * legend_rows(), 2))
         }
-      }else{
-        if(isTRUE(input$lower_plot_switch)){
-          grid.arrange(plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(2,2))
+
+      } else {
+        # No legend: compose just the plots
+        if (!is.null(p_lower)) {
+          gridExtra::grid.arrange(
+            grobs    = list(p_upper, p_lower),
+            ncol     = 1,
+            heights  = c(2, 2)
+          )
         } else {
-          #plot_zooming()
-          plot_appear_2()
+          p_upper
         }
       }
     }
+    # plot_export_funct = function(){
+    #   if(isTRUE(input$legend_switch)){
+    #     if(isTRUE(input$lower_plot_switch)){
+    #       grid.arrange(legend_appear_2(),plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(.4 * legend_rows(),2,2))
+    #     } else {
+    #       #plot_zooming()
+    #       grid.arrange(legend_appear_2(), plot_appear_2(), ncol = 1, heights = c(.4 * legend_rows(),2))
+    #     }
+    #   }else{
+    #     if(isTRUE(input$lower_plot_switch)){
+    #       grid.arrange(plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(2,2))
+    #     } else {
+    #       #plot_zooming()
+    #       plot_appear_2()
+    #     }
+    #   }
+    # }
     height_funct = function(){
       if(isTRUE(input$lower_plot_switch)){
         30
@@ -2472,7 +2515,66 @@ observe({
         }
       }
     }
-    plot_appear_2 = function () {
+    # plot_appear_2 = function () {
+    #   if (is.null(input$.id)|is.null(input$variable_prim)){
+    #     empty_plot_2()
+    #   } else {
+    #     if(isTRUE(input$freeze_switch) & input$variable_prim == "Radius"){
+    #       plot_sec_axis_2()
+    #     } else {
+    #       if(plot_GS$active & input$lower_plot_switch){
+    #         plot_prim_up_GS()+
+    #           theme(legend.position = "none")
+    #       } else {
+    #         if(isTRUE(input$cleaner_mode_switch)){
+    #           plot_prim_cleaner_mode()+
+    #             theme(legend.position = "none")
+    #         }else{
+    #         if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
+    #           plot_upper_plot()+
+    #             theme(legend.position = "none")
+    #         } else {
+    #           plot_sec_axis_2()
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    # }
+    # plot_appear_3 = function () {
+    #   if (is.null(input$.id)|is.null(input$variable_prim_lower)){
+    #     empty_plot_2()
+    #   } else {
+    #     if(plot_GS$active){
+    #       plot_prim_down_GS()+
+    #         theme(axis.text.x = element_blank(),
+    #               axis.title.x = element_blank())
+    #     } else {
+    #       if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
+    #         lower_plot_obj()+
+    #         # plot_lower_plot()+
+    #           theme(legend.position = "none")
+    #       } else {
+    #         plot_sec_axis_3()
+    #       }
+    #     }
+    #   }
+    # }
+    legend_appear_2 <- function() {
+      p <- upper_plot_obj()
+      legend <- cowplot::get_legend(p + theme(legend.position = "top"))
+      grid::grid.newpage()
+      grid::grid.draw(legend)
+      legend
+    }
+    # Plot_output ----
+    #input data plot
+    output$Data_tab_plot <- renderPlot({
+      input$goButton
+      isolate(plot_appear_1())
+    })
+    output$Plot_tab_upper_plot <- renderPlot({
+      req(input$navbar == "Plot")
       if (is.null(input$.id)|is.null(input$variable_prim)){
         empty_plot_2()
       } else {
@@ -2487,19 +2589,21 @@ observe({
               plot_prim_cleaner_mode()+
                 theme(legend.position = "none")
             }else{
-            if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
-              plot_upper_plot()+
-                theme(legend.position = "none")
-            } else {
-              plot_sec_axis_2()
+              if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
+                upper_plot_obj()+
+                  theme(legend.position = "none")
+              } else {
+                plot_sec_axis_2()
+              }
             }
           }
         }
       }
-    }
-    }
-    plot_appear_3 = function () {
-      if (is.null(input$.id)|is.null(input$variable_prim_lower)){
+    })
+    output$Plot_tab_lower_plot <- renderPlot({
+      req(input$navbar == "Plot")
+      if (is.null(input$.id) |is.null(input$variable_prim_lower)
+          ){
         empty_plot_2()
       } else {
         if(plot_GS$active){
@@ -2508,53 +2612,13 @@ observe({
                   axis.title.x = element_blank())
         } else {
           if (is.null(input$variable_sec)|isFALSE(input$sec_ax)|isTRUE(input$bar4)){
-            plot_lower_plot()+
+            lower_plot_obj()+
               theme(legend.position = "none")
           } else {
             plot_sec_axis_3()
           }
         }
       }
-    }
-    legend_appear_2 <- function() {
-      p <- upper_plot_obj()
-      legend <- cowplot::get_legend(p + theme(legend.position = "top"))
-      grid::grid.newpage()
-      grid::grid.draw(legend)
-      legend
-    }
-    # Plot_output ----
-    #input data plot
-    output$Data_tab_plot <- renderPlot({
-      input$goButton
-      isolate(plot_appear_1())
-    })
-    # changes6----
-    #plot_page
-    # RadiusPlot2_activator = reactiveValues(active = FALSE)
-    # observeEvent(input$Upperplot,{
-    #   if(input$Upperplot%%2 == 0){
-    #     RadiusPlot2_activator$active = TRUE
-    #   }else(
-    #     RadiusPlot2_activator$active = FALSE
-    #   )
-    # })
-    # output$Plot_tab_upper_plot <- renderPlot({
-    #   req(input$navbar) == "Plot"
-    #   RadiusPlot2_activator$active
-    #   isolate(plot_appear_2())
-    #   #plot_zooming()
-    # })
-    output$Plot_tab_upper_plot <- renderPlot({
-      req(input$navbar == "Plot")
-      p <- upper_plot_obj()
-      p + theme(legend.position = "none")
-    })
-    output$Plot_tab_lower_plot <- renderPlot({
-      req(input$navbar == "Plot")
-      p <- lower_plot_obj()
-      p + theme(legend.position = "none")
-      #plot_zooming()
     })
     #legend outputs ----
     output$legend_sizable <- renderUI({
@@ -4437,19 +4501,19 @@ observe({
     })
 
     #error warnings----
-    dataerrors <- reactive({
-      tryCatch({print(plot_appear_2())
-      }, message = function(e) {
-        return(e$message)
-      }, warning = function(e) {
-        return(e$message)
-      }, error = function(e) {
-        return(e$message)
-      })
-    })
-    output$ggplot_warnings <- renderPrint({
-      dataerrors()
-    })
+    # dataerrors <- reactive({
+    #   tryCatch({print(plot_appear_2())
+    #   }, message = function(e) {
+    #     return(e$message)
+    #   }, warning = function(e) {
+    #     return(e$message)
+    #   }, error = function(e) {
+    #     return(e$message)
+    #   })
+    # })
+    # output$ggplot_warnings <- renderPrint({
+    #   dataerrors()
+    # })
     auto_save = reactive({
       if(isTRUE(input$Auto_save_switch)){
         DateNext = function(){
