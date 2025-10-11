@@ -1434,6 +1434,25 @@ PLOTeR = function (){
       }
       return(c)
     })
+    # repeated invalidations with identical keys don’t rebuild the plot
+    upper_plot_obj <- reactive({
+      plot_upper_plot()
+    })
+    # %>%
+    #   bindEvent(
+    #     input$navbar,
+    #     input$variable_prim,
+    #     input$upper_plot_interval_input,
+    #     input$group_switch_upper_plot,
+    #     input$Groupby_upper_plot,
+    #     input$method_upper_plot,
+    #     input$se_switch_upper_plot,
+    #     input$one_by_one_switch,
+    #     input$one_by_one_group_select,
+    #     input$legend_value,
+    #     zooming$x, zooming$y,
+    #     ignoreInit = T
+    #   )
     plot_upper_plot = function(){
         rows <- if (!is.null(input$legend_value)) input$legend_value else legend_rows()
         data_upper_plot <- plot_plot_data() %>% {
@@ -2480,15 +2499,12 @@ observe({
         }
       }
     }
-    legend_appear_2 = function () {
-      if(is.null(input$.id)|is.null(input$variable_prim)){
-        grid.newpage()
-      } else {
-        legend = cowplot::get_plot_component(plot_upper_plot(), 'guide-box-top', return_all = TRUE)
-        grid.newpage()
-        grid.draw(legend)
-        return(legend)
-      }
+    legend_appear_2 <- function() {
+      p <- upper_plot_obj()
+      legend <- cowplot::get_legend(p + theme(legend.position = "top"))
+      grid::grid.newpage()
+      grid::grid.draw(legend)
+      legend
     }
     # Plot_output ----
     #input data plot
@@ -2513,8 +2529,9 @@ observe({
     #   #plot_zooming()
     # })
     output$Plot_tab_upper_plot <- renderPlot({
-      plot_appear_2()
-      #plot_zooming()
+      req(input$navbar == "Plot")
+      p <- upper_plot_obj()
+      p + theme(legend.position = "none")
     })
     output$Plot_tab_lower_plot <- renderPlot({
       plot_appear_3()
@@ -2526,13 +2543,14 @@ observe({
       conditionalPanel(condition = "input.legend_switch == true",plotOutput('Legend2', height = 40 * legend_rows()))
     })
     output$Legend2 <- renderPlot({
-      req(input$navbar) == "Plot"
-      # RadiusPlot2_activator$active
-      # isolate(grid.newpage())
-      # isolate(grid.draw(legend_appear_2()))
-      legend_appear_2()
-      #plot_zooming()
+      req(input$navbar == "Plot", isTRUE(input$legend_switch))
+      p <- upper_plot_obj()
+      # Use get_legend (or your original get_plot_component line)
+      legend <- cowplot::get_legend(p + theme(legend.position = "top"))
+      grid::grid.newpage()
+      grid::grid.draw(legend)
     })
+    outputOptions(output, "Legend2", suspendWhenHidden = TRUE)
     output$export_plot_btn <- downloadHandler(
       filename = function (){"Shinyplot.png"},
       content = function(file) {
