@@ -70,7 +70,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage(paste0("PLOTeR ", "1.0.7"), position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", "1.1.0"), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -1365,23 +1365,6 @@ PLOTeR = function (){
         }
       }
     }
-    # plot_export_funct = function(){
-    #   if(isTRUE(input$legend_switch)){
-    #     if(isTRUE(input$lower_plot_switch)){
-    #       grid.arrange(legend_appear_2(),plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(.4 * legend_rows(),2,2))
-    #     } else {
-    #       #plot_zooming()
-    #       grid.arrange(legend_appear_2(), plot_appear_2(), ncol = 1, heights = c(.4 * legend_rows(),2))
-    #     }
-    #   }else{
-    #     if(isTRUE(input$lower_plot_switch)){
-    #       grid.arrange(plot_appear_2(), plot_appear_3(), ncol = 1, heights = c(2,2))
-    #     } else {
-    #       #plot_zooming()
-    #       plot_appear_2()
-    #     }
-    #   }
-    # }
     height_funct = function(){
       if(isTRUE(input$lower_plot_switch)){
         30
