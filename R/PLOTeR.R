@@ -1440,7 +1440,16 @@ PLOTeR = function (){
     }) %>%
       bindEvent(
         input$navbar,
+        input$variable_prim,
+        input$upper_plot_interval_input,
+        input$group_switch_upper_plot,
+        input$Groupby_upper_plot,
+        input$method_upper_plot,
+        input$se_switch_upper_plot,
+        input$one_by_one_switch,
         input$one_by_one_group_select,
+        input$legend_value,
+        zooming$x, zooming$y,
         ignoreInit = T
       )
     plot_upper_plot = function(){
@@ -1494,7 +1503,25 @@ PLOTeR = function (){
             theme_bw()+
             guides(colour = guide_legend(title = NULL, direction = "vertical", byrow = T, nrow = rows))+
             theme(legend.position = "top")}
-      }
+    }
+    lower_plot_obj <- reactive({
+      plot_lower_plot()
+    }) %>%
+      bindEvent(
+        input$navbar,
+        input$variable_prim_lower,
+        input$lower_plot_interval_input,
+        input$group_switch_lower_plot,
+        input$lower_plot_switch,
+        input$Groupby_lower_plot,
+        input$method_lower_plot,
+        input$se_switch_lower_plot,
+        input$one_by_one_switch,
+        input$one_by_one_group_select,
+        input$legend_value,
+        zooming$x, zooming$y,
+        ignoreInit = T
+      )
     plot_lower_plot = function() {
       data_lower_plot <- plot_plot_data() %>% {
         if (input$lower_plot_interval_input == "original") {
@@ -2524,9 +2551,10 @@ observe({
       p + theme(legend.position = "none")
     })
     output$Plot_tab_lower_plot <- renderPlot({
-      plot_appear_3()
+      req(input$navbar == "Plot")
+      p <- lower_plot_obj()
+      p + theme(legend.position = "none")
       #plot_zooming()
-
     })
     #legend outputs ----
     output$legend_sizable <- renderUI({
@@ -3470,18 +3498,15 @@ observe({
         value = 0,
         {shiny::incProgress(2/10)
           if(input$bar21 == "first"){
-            meta_interval = isolate(df_meta())
             df = df %>% dplyr::group_by(.id) %>% dplyr::arrange(date_time, .by_group = T) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
               dplyr::group_by(.id, date_time) %>% dplyr::filter(row_number()==1) %>% dplyr::ungroup() %>%
-              dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA)) %>%
-              dplyr::left_join(meta_interval, by = ".id")
+              dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA))
+
           } else {
             if(input$bar21 == "last"){
-              meta_interval = isolate(df_meta())
               df = df %>% dplyr::group_by(.id) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
                 dplyr::group_by(.id, date_time) %>% dplyr::filter(row_number()==n()) %>% dplyr::ungroup() %>%
-                dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA)) %>%
-                dplyr::left_join(meta_interval, by = ".id")
+                dplyr::mutate_if(is.numeric,~replace(., is.nan(.)|is.infinite(.), NA))
             } else {
               meta_interval = isolate(df_meta())
               df = df %>% dplyr::group_by(.id) %>% dplyr::mutate(date_time = floor_date(date_time, input$bar20)) %>%
