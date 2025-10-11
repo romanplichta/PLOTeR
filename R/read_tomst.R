@@ -18,28 +18,10 @@
 #' df <- read_tomst("data_94000000_0.csv", delim = ".")
 #'
 #' @import readr
-#' @import utils
-#' @import ggplot2
 #' @importFrom plyr ldply
-#' @importFrom zoo na.approx na.locf
 #' @import dplyr
 #' @import lubridate
 #' @import tidyr
-#' @import dbscan
-#' @importFrom stats complete.cases sd na.omit median quantile
-#' @rawNamespace import(shiny, except = c(dataTableOutput,renderDataTable, runExample))
-#' @import DT
-#' @import shinyWidgets
-#' @import shinyjqui
-#' @import shinyTime
-#' @importFrom shinyjs hide useShinyjs hidden
-#' @import reshape2
-#' @import rlang
-#' @import tibble
-#' @importFrom gridExtra grid.arrange
-#' @importFrom grid grid.newpage grid.draw
-#' @importFrom cowplot get_legend
-#' @import png
 #'
 #' @export
 read_tomst = function (path, file, radius_units  = c("auto","um", "tomst"), interval = c("auto","1 min", "5 min", "15 min", "1 hour"), TMS_calibration = c("Loamy_Sand_A", "Loamy_Sand_B","Sandy_Loam_A","Sandy_Loam_B","Loam","Sil_Loam", "Peat", "Sand"), delim){

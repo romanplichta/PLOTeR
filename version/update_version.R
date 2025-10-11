@@ -5,3 +5,6 @@ descript$set("Version", "1.0.7")
 descript$write()
 rm(descript)
 usethis::use_build_ignore(c("version"))
+desc::desc(file = "DESCRIPTION")$get("Version")
+
+devtools::document()
