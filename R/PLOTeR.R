@@ -1818,111 +1818,111 @@ PLOTeR = function (){
         return(NULL)
       }
       }
-    cleaner_mode_calculator = function(){
-      if(isTRUE(input$cleaner_mode_switch)){
-        if(input$compare_within == "within days and across ids"){
-          data_correct_grouping = "day"
-        } else {if(input$compare_within == "within ids and across days"){
-          data_correct_grouping = ".id"
-        } else {
-          data_correct_grouping = NULL
-        }
-        }
-        if(isTRUE(input$compare_to_selected)){
-          if(isFALSE(input$one_by_one_switch)){
-            lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
-            upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
-          }else{
-            lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
-            upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
-          }
-        }
-        # level-up part
-        if(isTRUE(input$cleaner_levelup_switch)){
-          #week searching and data filter
-          if(isTRUE(input$accept_nas2_switch)){
-            cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = !!rlang::sym(input$variable_prim)) %>% tidyr::fill(!!rlang::sym(input$variable_prim), .direction = "downup")
-          }else{
-            cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = 1)
-          }
-          #searching differences
-            cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% dplyr::group_by(.id)%>%
-            dplyr::mutate(Index_level2 = !!rlang::sym(input$variable_prim)-lag(!!rlang::sym(input$variable_prim))) %>%
-            dplyr::mutate(Index_level2 = ifelse(abs(Index_level2) > input$cleaner_levelup_threshold | is.na(nas), TRUE, FALSE)) %>%
-              filter(Index_level2 == TRUE) %>%
-              # dplyr::rename_with(~paste0("levelup_",input$variable_prim), "outliers") %>%
-              plyr::rename(., c("Index_level2" = paste0("levelup_",input$variable_prim))) %>%
-              mutate(day = lubridate::floor_date(date_time, "day")) %>%
-            select(.id, day, paste0("levelup_",input$variable_prim))%>%
-            distinct(.keep_all = T) %>%
-            as.data.frame()
-        } else {
-          cleaner_mode_data_levelup = NULL
-        }
-        # outliers part
-        # all columns version
-        # cleaner_mode_columns = isolate(d$a) %>% select_if(is.numeric) %>% colnames()
-        # single variable version
-        cleaner_mode_columns = isolate(d$a) %>% select(input$variable_prim) %>% colnames()
-        if(length(isolate(d$a) %>% select_if(is.numeric)) == 1) {
-          cleaner_mode_data_day = isolate(d$a) %>% mutate(day = floor_date(date_time, "day")) %>% group_by(.id , day) %>% summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% dplyr::rename_with(function(x){paste0(input$variable_prim,"_",x)},where(is.numeric)) %>% as.data.frame()
-        } else {
-          cleaner_mode_data_day = isolate(d$a) %>% mutate(day = floor_date(date_time, "day")) %>% group_by(.id , day) %>% summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% as.data.frame()
-        }
-        cleaner_mode_data_outliers = cleaner_mode_data_day %>% select(.id, day) %>% ungroup()
-        if(input$quantile_correct_input == "Quantiles"){
-          for(i in cleaner_mode_columns){
-            # quantiles
-            if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
-            data_correct = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>%
-              {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
-              group_by(across(data_correct_grouping)) %>% mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
-              rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% {if(isTRUE(input$compare_to_selected)) dplyr::select(.data =.,-ampl, -mean) %>% dplyr::left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>%
-              {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(ampl>=ampl_lower & ampl<=ampl_upper, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
-              {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(mean>=mean_lower & mean<=mean_upper & outliers == FALSE, FALSE, TRUE)) else .} %>%
-              mutate(year = as.factor(year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T | is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
-              {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
-                  mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
-              ungroup() %>% select(outliers, day, .id) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
-            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
-          suppressWarnings(rm(data_correct, cleaner_mode_data_day, cleaner_mode_columns, i,data_correct_grouping, data_day_orig))
-        }else{
-          for(i in cleaner_mode_columns){
-            # z score
-            if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
-            data_correct = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>%
-              {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
-              group_by(across(data_correct_grouping)) %>% mutate_if(is.numeric, list(mean = mean, sd = sd), na.rm = T) %>%
-              rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% {if(isTRUE(input$compare_to_selected)) select(.data =.,-ampl, -mean) %>% left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>% mutate (score_ampl = abs(ampl-ampl_mean)/abs(ampl_sd), score_mean = abs(mean-mean_mean)/abs(mean_sd)) %>%
-              {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(score_ampl<=input$z_score_threshold, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
-              {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(score_mean<=input$z_score_threshold & outliers == FALSE, FALSE, TRUE)) else .} %>%
-              mutate(year = as.factor(year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T| is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
-              {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
-                  mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
-              ungroup() %>% select(outliers, .id, day) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
-            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
-          suppressWarnings(rm(data_correct, cleaner_mode_data_day, cleaner_mode_columns, i, data_correct_grouping, data_day_orig))
-        }
-        if(!is.null(cleaner_mode_data_levelup)){
-          cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% full_join(cleaner_mode_data_levelup, by = c(".id", "day")) %>%
-            mutate(across(starts_with(paste0("outliers_", input$variable_prim)), ~ replace(., get(paste0("levelup_", input$variable_prim)) == TRUE, FALSE))) %>%
-            mutate_if(is.logical, ~tidyr::replace_na(., FALSE)) %>% as.data.frame()
-          assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
-          cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
-          cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
-          cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_data_outliers)
-          suppressWarnings(rm(cleaner_mode_data_outliers,cleaner_mode_data_levelup))
-        }else{
-          assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
-          cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
-          cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
-          suppressWarnings(rm(cleaner_mode_data_outliers))
-        }
-
-      }else{
-        NULL
-      }
-    }
+    # cleaner_mode_calculator = function(){
+    #   if(isTRUE(input$cleaner_mode_switch)){
+    #     if(input$compare_within == "within days and across ids"){
+    #       data_correct_grouping = "day"
+    #     } else {if(input$compare_within == "within ids and across days"){
+    #       data_correct_grouping = ".id"
+    #     } else {
+    #       data_correct_grouping = NULL
+    #     }
+    #     }
+    #     if(isTRUE(input$compare_to_selected)){
+    #       if(isFALSE(input$one_by_one_switch)){
+    #         lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+    #         upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+    #       }else{
+    #         lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+    #         upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+    #       }
+    #     }
+    #     # level-up part
+    #     if(isTRUE(input$cleaner_levelup_switch)){
+    #       #week searching and data filter
+    #       if(isTRUE(input$accept_nas2_switch)){
+    #         cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = !!rlang::sym(input$variable_prim)) %>% tidyr::fill(!!rlang::sym(input$variable_prim), .direction = "downup")
+    #       }else{
+    #         cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = 1)
+    #       }
+    #       #searching differences
+    #         cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% dplyr::group_by(.id)%>%
+    #         dplyr::mutate(Index_level2 = !!rlang::sym(input$variable_prim)-lag(!!rlang::sym(input$variable_prim))) %>%
+    #         dplyr::mutate(Index_level2 = ifelse(abs(Index_level2) > input$cleaner_levelup_threshold | is.na(nas), TRUE, FALSE)) %>%
+    #           filter(Index_level2 == TRUE) %>%
+    #           # dplyr::rename_with(~paste0("levelup_",input$variable_prim), "outliers") %>%
+    #           plyr::rename(., c("Index_level2" = paste0("levelup_",input$variable_prim))) %>%
+    #           mutate(day = lubridate::floor_date(date_time, "day")) %>%
+    #         select(.id, day, paste0("levelup_",input$variable_prim))%>%
+    #         distinct(.keep_all = T) %>%
+    #         as.data.frame()
+    #     } else {
+    #       cleaner_mode_data_levelup = NULL
+    #     }
+    #     # outliers part
+    #     # all columns version
+    #     # cleaner_mode_columns = isolate(d$a) %>% select_if(is.numeric) %>% colnames()
+    #     # single variable version
+    #     cleaner_mode_columns = isolate(d$a) %>% select(input$variable_prim) %>% colnames()
+    #     if(length(isolate(d$a) %>% select_if(is.numeric)) == 1) {
+    #       cleaner_mode_data_day = isolate(d$a) %>% mutate(day = floor_date(date_time, "day")) %>% group_by(.id , day) %>% summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% dplyr::rename_with(function(x){paste0(input$variable_prim,"_",x)},where(is.numeric)) %>% as.data.frame()
+    #     } else {
+    #       cleaner_mode_data_day = isolate(d$a) %>% mutate(day = floor_date(date_time, "day")) %>% group_by(.id , day) %>% summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% as.data.frame()
+    #     }
+    #     cleaner_mode_data_outliers = cleaner_mode_data_day %>% select(.id, day) %>% ungroup()
+    #     if(input$quantile_correct_input == "Quantiles"){
+    #       for(i in cleaner_mode_columns){
+    #         # quantiles
+    #         if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+    #         data_correct = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>%
+    #           {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+    #           group_by(across(data_correct_grouping)) %>% mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
+    #           rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% {if(isTRUE(input$compare_to_selected)) dplyr::select(.data =.,-ampl, -mean) %>% dplyr::left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>%
+    #           {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(ampl>=ampl_lower & ampl<=ampl_upper, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
+    #           {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(mean>=mean_lower & mean<=mean_upper & outliers == FALSE, FALSE, TRUE)) else .} %>%
+    #           mutate(year = as.factor(year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T | is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+    #           {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+    #               mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+    #           ungroup() %>% select(outliers, day, .id) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+    #         cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
+    #       suppressWarnings(rm(data_correct, cleaner_mode_data_day, cleaner_mode_columns, i,data_correct_grouping, data_day_orig))
+    #     }else{
+    #       for(i in cleaner_mode_columns){
+    #         # z score
+    #         if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+    #         data_correct = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>%
+    #           {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+    #           group_by(across(data_correct_grouping)) %>% mutate_if(is.numeric, list(mean = mean, sd = sd), na.rm = T) %>%
+    #           rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% {if(isTRUE(input$compare_to_selected)) select(.data =.,-ampl, -mean) %>% left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>% mutate (score_ampl = abs(ampl-ampl_mean)/abs(ampl_sd), score_mean = abs(mean-mean_mean)/abs(mean_sd)) %>%
+    #           {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(score_ampl<=input$z_score_threshold, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
+    #           {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(score_mean<=input$z_score_threshold & outliers == FALSE, FALSE, TRUE)) else .} %>%
+    #           mutate(year = as.factor(year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T| is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+    #           {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+    #               mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+    #           ungroup() %>% select(outliers, .id, day) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+    #         cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
+    #       suppressWarnings(rm(data_correct, cleaner_mode_data_day, cleaner_mode_columns, i, data_correct_grouping, data_day_orig))
+    #     }
+    #     if(!is.null(cleaner_mode_data_levelup)){
+    #       cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% full_join(cleaner_mode_data_levelup, by = c(".id", "day")) %>%
+    #         mutate(across(starts_with(paste0("outliers_", input$variable_prim)), ~ replace(., get(paste0("levelup_", input$variable_prim)) == TRUE, FALSE))) %>%
+    #         mutate_if(is.logical, ~tidyr::replace_na(., FALSE)) %>% as.data.frame()
+    #       assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
+    #       cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
+    #       cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
+    #       cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_data_outliers)
+    #       suppressWarnings(rm(cleaner_mode_data_outliers,cleaner_mode_data_levelup))
+    #     }else{
+    #       assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
+    #       cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
+    #       cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
+    #       suppressWarnings(rm(cleaner_mode_data_outliers))
+    #     }
+    #
+    #   }else{
+    #     NULL
+    #   }
+    # }
     observeEvent(input$cleaner_upload_btn,{
       cleaner_meta_choices = df_choices()
       cleaner_meta_choices = cleaner_meta_choices[startsWith(cleaner_meta_choices, "cleaning_meta")]
@@ -2057,7 +2057,8 @@ PLOTeR = function (){
           actionButton("Cleaner_Button_delete", "Delete"),
           actionButton("Cleaner_Button_keep", "Keep"),
           actionButton("Cleaner_Button_levelup", "Level-up"),
-          actionButton("Cleaner_Button_apply", "Apply"),
+          actionButton("Cleaner_Button_levelup_detect", "Detect jumps"),
+          actionButton("Cleaner_Button_apply", "Apply", style = "margin-left: 10px"),
           actionButton("Cleaner_Button_save", "Save"),
           actionButton(inputId = "cleaner_refresh_btn", label = "Refresh", style = "margin-left: 10px"),
           actionButton(inputId = "cleaner_upload_btn", label = "Upload"),
@@ -2183,7 +2184,9 @@ observeEvent(input$Cleaner_Button_apply,{
           meta_tmp_cumsum = meta_tmp %>% select(.id, day, levelup_order, levelup_data_cumsum) %>% group_by(.id, levelup_order) %>% filter(row_number()==n()) %>% mutate(day = day+lubridate::days(1)) %>% as.data.frame()
           meta_tmp = meta_tmp %>% select(-levelup_data_cumsum, -levelup_order) %>% as.data.frame()
           cleaner_data_tmp = cleaner_data_tmp %>% group_by(.id) %>% arrange(date_time, .by_group = T) %>% mutate(day = lubridate::floor_date(date_time, "day")) %>% left_join(meta_tmp, by = c(".id", "day")) %>% left_join(meta_tmp_cumsum, by = c(".id", "day"))  %>% tidyr::fill(levelup_data_cumsum, .direction = "down") %>% mutate(levelup_data_cumsum = tidyr::replace_na(levelup_data_cumsum,0)) %>%
-            mutate(levelup_leveled = ifelse(is.na(levelup_data), !!rlang::sym(sub("levelup_", "",i)) +levelup_data_cumsum, levelup_data+levelup_data_cumsum)) %>% dplyr::mutate(across("levelup_leveled", ~ replace(., is.na(get("nas")), NA))) %>% select(.id, date_time, levelup_leveled) %>% plyr::rename(.,c("levelup_leveled" = sub("levelup_", "",i))) %>% as.data.frame()
+          mutate(levelup_leveled = ifelse(is.na(levelup_data), !!rlang::sym(sub("levelup_", "",i)) +levelup_data_cumsum, levelup_data+levelup_data_cumsum)) %>%
+          dplyr::mutate(levelup_leveled = replace(levelup_leveled, is.na(!!rlang::sym(sub("levelup_", "",i))), NA)) %>%
+          select(.id, date_time, levelup_leveled) %>% plyr::rename(.,c("levelup_leveled" = sub("levelup_", "",i))) %>% as.data.frame()
           df = df %>% left_join(cleaner_data_tmp, by = c(".id", "date_time"))  %>%
             dplyr::mutate(across(paste0(sub("levelup_", "",i),".x"), ~ifelse(!is.na(get(paste0(sub("levelup_", "",i), ".y"))), get(paste0(sub("levelup_", "",i), ".y")), get(paste0(sub("levelup_", "",i), ".x")))))%>% dplyr::select(!ends_with(".y")) %>% dplyr::select(-any_of("day")) %>% dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% as.data.frame()
         }
@@ -2212,55 +2215,86 @@ observeEvent(input$Cleaner_Button_save,{
 
   }
   assign(cleaning_meta_name, cleaner_mode_rect$cleaning_meta, envir = envir)
+  showNotification(paste0("Saved as: ", cleaning_meta_name))
 })
 # new changes5----
-observeEvent(input$Cleaner_Button_levelup,{
-  if(is.null(input$RadiusPlot_brush)){
+observeEvent(input$Cleaner_Button_levelup, {
+  if (is.null(input$RadiusPlot_brush)) {
     NULL
-  }else{
-    if(isFALSE(input$one_by_one_switch)){
-      first_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
-      last_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
-      if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
+  } else {
+    if (isFALSE(input$one_by_one_switch)) {
+      subset_df <- isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select, ]
+      bp <- brushedPoints(subset_df, input$RadiusPlot_brush, xvar = "date_time")
+      first_brush <- bp %>%
+        dplyr::filter(date_time == min_max(date_time)) %>%
+        dplyr::distinct(date_time) %>%
+        as.data.frame()
+      last_brush <- bp %>%
+        dplyr::filter(date_time == min_max(date_time, "max")) %>%
+        dplyr::distinct(date_time) %>%
+        as.data.frame()
+      if (nrow(first_brush) == 0 || nrow(last_brush) == 0) {
         NULL
-      }else{
-        df10 = isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,] %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
-        }
-      }else{
-      first_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
-      last_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
-      if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
+      } else {
+        brushed_ids <- unique(bp$.id)
+        df10 <- subset_df %>%
+          dplyr::filter(.id %in% brushed_ids,
+                        dplyr::between(date_time, first_brush$date_time, last_brush$date_time))
+      }
+    } else {
+      subset_df <- isolate(d$a)
+      bp <- brushedPoints(subset_df, input$RadiusPlot_brush, xvar = "date_time")
+      first_brush <- bp %>%
+        dplyr::filter(date_time == min_max(date_time)) %>%
+        dplyr::distinct(date_time) %>%
+        as.data.frame()
+      last_brush <- bp %>%
+        dplyr::filter(date_time == min_max(date_time, "max")) %>%
+        dplyr::distinct(date_time) %>%
+        as.data.frame()
+      if (nrow(first_brush) == 0 || nrow(last_brush) == 0) {
         NULL
-      }else{
-        df10 = isolate(d$a) %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
+      } else {
+        brushed_ids <- unique(bp$.id)
+        df10 <- subset_df %>%
+          dplyr::filter(.id %in% brushed_ids,
+                        dplyr::between(date_time, first_brush$date_time, last_brush$date_time))
       }
-      }
-    if(!exists("df10")){
+    }
+    if (!exists("df10")) {
       NULL
     } else {
       # change7----
-      # if(isFALSE(input$fine_mode)){
-      df10 = df10 %>% droplevels() %>% mutate(day = floor_date(date_time, "day")) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
-        dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
-      # }else{
-      #   df10 = df10 %>% droplevels() %>% mutate(day = date_time) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
-      #     dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
-      # }
-
-      if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
-        if(is.null(cleaner_mode_rect$cleaning_meta)){
+      # if (isFALSE(input$fine_mode)){
+      df10 = df10 %>%
+        droplevels() %>%
+        mutate(day = floor_date(date_time, "day")) %>%
+        select(.id, day, input$variable_prim) %>%
+        rename_with(~ sub(paste0(input$variable_prim),
+                          paste0("levelup_", input$variable_prim), .x),
+                    everything()) %>%
+        dplyr::mutate(across(starts_with("levelup"), ~ TRUE)) %>%
+        distinct_all(.keep_all = TRUE)
+      if ("cleaning_meta" %in% ls(envir = envir) && !is.null(cleaner_mode_rect$cleaning_meta)) {
+        if (is.null(cleaner_mode_rect$cleaning_meta)) {
           cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
           assign("cleaning_meta", df10, envir = envir)
           cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
           rm(df10)
-        }else{
-          cleaner_mode_rect$cleaning_meta = isolate(cleaner_mode_rect$cleaning_meta) %>% full_join(df10, by = c(".id", "day")) %>% dplyr::mutate(across(ends_with(".x"), ~ replace(., get(paste0("levelup_", input$variable_prim, ".y")) == TRUE, TRUE))) %>%
-            dplyr::select(!ends_with(".y")) %>% dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% mutate_if(is.logical, ~replace_na(., FALSE))
+        } else {
+          cleaner_mode_rect$cleaning_meta = isolate(cleaner_mode_rect$cleaning_meta) %>%
+            full_join(df10, by = c(".id", "day")) %>%
+            dplyr::mutate(across(ends_with(".x"),
+                                 ~ replace(., get(paste0("levelup_", input$variable_prim, ".y")) == TRUE, TRUE))) %>%
+            dplyr::select(!ends_with(".y")) %>%
+            dplyr::rename_all(~ sub('.x', '', .x, fixed = TRUE)) %>%
+            mutate_if(is.logical, ~ replace_na(., FALSE))
+
           assign("cleaning_meta", cleaner_mode_rect$cleaning_meta, envir = envir)
-          cleaner_mode_rect$data_levelup =  cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+          cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
           rm(df10)
         }
-      }else{
+      } else {
         cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
         assign("cleaning_meta", df10, envir = envir)
         cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
@@ -2268,6 +2302,122 @@ observeEvent(input$Cleaner_Button_levelup,{
       }
     }
   }
+})
+
+# observeEvent(input$Cleaner_Button_levelup,{
+#   if(is.null(input$RadiusPlot_brush)){
+#     NULL
+#   }else{
+#     if(isFALSE(input$one_by_one_switch)){
+#       first_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
+#       last_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
+#       if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
+#         NULL
+#       }else{
+#         df10 = isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,] %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
+#         }
+#       }else{
+#       first_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
+#       last_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
+#       if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
+#         NULL
+#       }else{
+#         df10 = isolate(d$a) %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
+#       }
+#       }
+#     if(!exists("df10")){
+#       NULL
+#     } else {
+#       # change7----
+#       # if(isFALSE(input$fine_mode)){
+#       df10 = df10 %>% droplevels() %>% mutate(day = floor_date(date_time, "day")) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
+#         dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
+#       # }else{
+#       #   df10 = df10 %>% droplevels() %>% mutate(day = date_time) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
+#       #     dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
+#       # }
+#
+#       if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
+#         if(is.null(cleaner_mode_rect$cleaning_meta)){
+#           cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
+#           assign("cleaning_meta", df10, envir = envir)
+#           cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+#           rm(df10)
+#         }else{
+#           cleaner_mode_rect$cleaning_meta = isolate(cleaner_mode_rect$cleaning_meta) %>% full_join(df10, by = c(".id", "day")) %>% dplyr::mutate(across(ends_with(".x"), ~ replace(., get(paste0("levelup_", input$variable_prim, ".y")) == TRUE, TRUE))) %>%
+#             dplyr::select(!ends_with(".y")) %>% dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% mutate_if(is.logical, ~replace_na(., FALSE))
+#           assign("cleaning_meta", cleaner_mode_rect$cleaning_meta, envir = envir)
+#           cleaner_mode_rect$data_levelup =  cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+#           rm(df10)
+#         }
+#       }else{
+#         cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
+#         assign("cleaning_meta", df10, envir = envir)
+#         cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+#         rm(df10)
+#       }
+#     }
+#   }
+# })
+observeEvent(input$Cleaner_Button_levelup_detect,{
+  showModal(modalDialog(
+    title = "Detect jumps.",
+    "Detecting jumps over defined threshold.",
+    numericInput("cleaner_levelup_threshold", "Jumps over:", value = 300, min = 100, max = 9000, step = 100),
+    shinyWidgets::materialSwitch("cleaner_levelup_detect_all", "Process all selected data?", status = "primary",value = F),
+    shinyWidgets::materialSwitch("accept_nas2_switch", "Across empty periods?", status = "primary",value = F),
+    easyClose = TRUE,
+    footer = tagList(
+      modalButton("Cancel"),
+      actionButton("Cleaner_Button_levelup_detect_ok", "OK")
+    )
+  ))
+})
+observeEvent(input$Cleaner_Button_levelup_detect_ok,{
+  if(isTRUE(input$cleaner_levelup_detect_all)){
+    cleaner_mode_data_levelup = isolate(d$a)
+  }else{
+    cleaner_mode_data_levelup = isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,]
+  }
+  if(isTRUE(input$accept_nas2_switch)){
+    cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% mutate(nas = !!rlang::sym(input$variable_prim)) %>% tidyr::fill(!!rlang::sym(input$variable_prim), .direction = "downup")
+  }else{
+    cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% mutate(nas = 1)
+  }
+  if(!exists("cleaner_mode_data_levelup")){
+      NULL
+    } else {
+      cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% dplyr::group_by(.id)%>%
+        dplyr::mutate(Index_level2 = !!rlang::sym(input$variable_prim)-lag(!!rlang::sym(input$variable_prim))) %>%
+        dplyr::mutate(Index_level2 = ifelse(abs(Index_level2) > input$cleaner_levelup_threshold | is.na(nas), TRUE, FALSE)) %>%
+        filter(Index_level2 == TRUE) %>%
+        # dplyr::rename_with(~paste0("levelup_",input$variable_prim), "outliers") %>%
+        plyr::rename(., c("Index_level2" = paste0("levelup_",input$variable_prim))) %>%
+        mutate(day = lubridate::floor_date(date_time, "day")) %>%
+        select(.id, day, paste0("levelup_",input$variable_prim))%>%
+        distinct(.keep_all = T) %>%
+        as.data.frame()
+      if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
+        if(is.null(cleaner_mode_rect$cleaning_meta)){
+          cleaner_mode_rect$cleaning_meta = cleaner_mode_data_levelup %>% as.data.frame()
+          assign("cleaning_meta", cleaner_mode_data_levelup, envir = envir)
+          cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+          rm(cleaner_mode_data_levelup)
+        }else{
+          cleaner_mode_rect$cleaning_meta = isolate(cleaner_mode_rect$cleaning_meta) %>% full_join(cleaner_mode_data_levelup, by = c(".id", "day")) %>% dplyr::mutate(across(ends_with(".x"), ~ replace(., get(paste0("levelup_", input$variable_prim, ".y")) == TRUE, TRUE))) %>%
+            dplyr::select(!ends_with(".y")) %>% dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% mutate_if(is.logical, ~replace_na(., FALSE))
+          assign("cleaning_meta", cleaner_mode_rect$cleaning_meta, envir = envir)
+          cleaner_mode_rect$data_levelup =  cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+          rm(cleaner_mode_data_levelup)
+        }
+      }else{
+        cleaner_mode_rect$cleaning_meta = cleaner_mode_data_levelup %>% as.data.frame()
+        assign("cleaning_meta", cleaner_mode_data_levelup, envir = envir)
+        cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
+        rm(cleaner_mode_data_levelup)
+      }
+    }
+  removeModal()
 })
 observe({
       if(req(input$navbar) == "Data")
@@ -3722,7 +3872,54 @@ observe({
       shiny::incProgress(3/10,  detail = "Done")
         })
     }
+    # changefillgap----
     fill_gap_avg = function(){
+      shiny::withProgress(
+        message = paste0("Processing..."),
+        detail = "Selecting data",
+        value = 0,
+        {
+          if(isTRUE(input$fill_id_select | isFALSE(input$one_by_one_switch))){
+            df3 = isolate(d$a)
+            target_id = levels(df3$.id)
+          }else{
+            df3 = isolate(d$a)
+            target_id = input$one_by_one_group_select
+          }
+          shiny::incProgress(2/10,  detail = "Analysing Nas")
+          if(is.null(input$fill_gap_group)){
+            df3 = as.data.frame(df3 %>% group_by(.id) %>% dplyr::arrange(date_time, .by_group = T) %>% dplyr::rename(fill_avg = input$variable_prim) %>%
+                                  dplyr::select(.id, date_time, fill_avg) %>% group_by(.id) %>%
+                                  mutate(na_order = cumsum(!is.na(fill_avg)), left = na.locf(fill_avg, na.rm = F), right = na.locf(fill_avg, fromLast = T, na.rm = F)) %>%
+                                  mutate(na_order = ifelse(is.na(fill_avg), na_order, NA)) %>% group_by(.id, na_order) %>% mutate(na_n = n()+1) %>%
+                                  ungroup() %>% dplyr::filter(date_time %in% df3[is.na(df3[input$variable_prim]),"date_time"]) %>%
+                                  dplyr::group_by(date_time) %>% dplyr::mutate(fill_avg_mean = mean(fill_avg, na.rm = T)) %>% ungroup() %>%
+                                  dplyr::filter(.id %in% target_id) %>% droplevels() %>% group_by(.id) %>% filter(is.na(fill_avg)))
+
+          } else {
+            df3 = as.data.frame(df3 %>% group_by(.id) %>% dplyr::arrange(date_time, .by_group = T) %>% dplyr::rename(fill_avg = input$variable_prim) %>%
+                                  dplyr::select(.id, date_time, fill_avg, input$fill_gap_group) %>% group_by(.id) %>%
+                                  mutate(na_order = cumsum(!is.na(fill_avg)), left = na.locf(fill_avg, na.rm = F), right = na.locf(fill_avg, fromLast = T, na.rm = F)) %>%
+                                  mutate(na_order = ifelse(is.na(fill_avg), na_order, NA)) %>% group_by(.id, na_order) %>% mutate(na_n = n()+1) %>%
+                                  ungroup() %>% dplyr::filter(date_time %in% df3[is.na(df3[input$variable_prim]),"date_time"]) %>%
+                                  dplyr::group_by(.dots = c("date_time", input$fill_gap_group)) %>% dplyr::mutate(fill_avg_mean = mean(fill_avg, na.rm = T)) %>% ungroup() %>%
+                                  dplyr::filter(.id %in% target_id) %>% droplevels() %>% group_by(.id) %>% filter(is.na(fill_avg)))
+          }
+          shiny::incProgress(2/10,  detail = "Filling NAs")
+          df3 = as.data.frame(df3 %>% group_by(.id, na_order) %>% mutate(fill_avg_left = first(fill_avg_mean), fill_avg_right = last(fill_avg_mean)) %>%
+                                mutate(fill_avg2 = ifelse(is.na(left), fill_avg_mean+(right-fill_avg_right),  fill_avg_mean+(left-fill_avg_left))) %>%
+                                mutate(fill_avg2 = fill_avg2+(cumsum((right-last(fill_avg2)))/na_n)) %>% ungroup() %>% select(date_time, .id, fill_avg2))
+          shiny::incProgress(2/10,  detail = "Joining data")
+          df = as.data.frame(dplyr::left_join(df, df3, by = c('.id', 'date_time')) %>% mutate(fill_avg2 = ifelse(is.na(fill_avg2), !!rlang::sym(input$variable_prim), fill_avg2)) %>%
+                               select(-c(!!rlang::sym(input$variable_prim))))
+          shiny::incProgress(2/10,  detail = "Assigning")
+          df = plyr::rename(df, c("fill_avg2" = input$variable_prim))
+          rm(df3)
+          assign('df', df, envir=envir)
+          shiny::incProgress(2/10,  detail = "Done")
+        })
+    }
+    fill_gap_avg_scale = function(){
       shiny::withProgress(
         message = paste0("Processing..."),
         detail = "Selecting data",
@@ -3882,6 +4079,9 @@ observe({
         br(),
         br(),
         conditionalPanel(condition = "input.fill_gap_list == 'average'",
+                         shinyWidgets::materialSwitch("fill_gap_scale", "Scale average by growh rate?",
+                                                      status = "primary",
+                                                      value = F),
                          selectInput("fill_gap_group",
                                      "Replace NAs within group:",
                                      choices = colnames(select(df_meta(), -.id)),
@@ -3902,7 +4102,11 @@ observe({
         d$b <- df
         removeModal()
       } else { if(input$fill_gap_list == "average" & length(input$.id)>=2){
-        fill_gap_avg()
+        if(isTRUE(input$fill_gap_scale)){
+          fill_gap_avg_scale()
+        }else{
+          fill_gap_avg()
+        }
         d$b <- df
         removeModal()
       }else {
