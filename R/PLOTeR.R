@@ -286,18 +286,19 @@ PLOTeR = function (){
                                                                     icon = icon("cog", lib = "glyphicon"),
                                                                     fluidRow(
                                                                       column(12,align="left",
-                                                                             selectInput("variable_prim_lower", "Variable",""),
                                                                              shinyWidgets::materialSwitch("lower_plot_switch","Lower plot", status = "primary"),
-                                                                             selectInput("lower_plot_interval_input", "Interval",choices = c("original","min", "hour","day")),
-                                                                             shinyWidgets::materialSwitch("group_switch_lower_plot","Group", status = "primary"),
-                                                                             conditionalPanel(condition = "input.group_switch_lower_plot == true",
-                                                                                              selectInput("Groupby_lower_plot", NULL,""),
-                                                                                              selectInput("method_lower_plot", "Method",c("auto", "lm", "glm", "gam", "mean"),
-                                                                                                          selected = "auto"),
-                                                                                              shinyWidgets::materialSwitch("se_switch_lower_plot","SE",value = T, status = "info", width = "50%")
-                                                                             ),
-                                                                             column(10,actionButton(inputId = 'subtract_lower_plot', label = "Subtract offset", width = "100%")),
-                                                                             column(2,actionButton("bar39_lower", "",icon = icon("refresh", lib = "glyphicon"), status = "primary"))
+                                                                             conditionalPanel(condition = "input.lower_plot_switch == true",
+                                                                                              selectInput("variable_prim_lower", "Variable",""),
+                                                                                              selectInput("lower_plot_interval_input", "Interval",choices = c("original","min", "hour","day")),
+                                                                                              shinyWidgets::materialSwitch("group_switch_lower_plot","Group", status = "primary"),
+                                                                                              conditionalPanel(condition = "input.group_switch_lower_plot == true",
+                                                                                                               selectInput("Groupby_lower_plot", NULL,""),
+                                                                                                               selectInput("method_lower_plot", "Method",c("auto", "lm", "glm", "gam", "mean"),
+                                                                                                                           selected = "auto"),
+                                                                                                               shinyWidgets::materialSwitch("se_switch_lower_plot","SE",value = T, status = "info", width = "50%")
+                                                                                              ),
+                                                                                              column(10,actionButton(inputId = 'subtract_lower_plot', label = "Subtract offset", width = "100%")),
+                                                                                              column(2,actionButton("bar39_lower", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")))
                                                                       )
                                                                     ))),
                                                  div(style = "width: 5px;"),
@@ -1415,22 +1416,20 @@ PLOTeR = function (){
         zooming$y <- NULL
       }
     })
+    plot_refresh <- reactiveVal(FALSE)
     observeEvent(input$refresh_plots_btn, {
       zooming$x <- NULL
       zooming$y <- NULL
-      shinyWidgets::updateMaterialSwitch(session, "group_switch_lower_plot", value = FALSE)
-      shinyWidgets::updateMaterialSwitch(session, "group_switch_upper_plot", value = FALSE)
-      updateSelectInput(session, "Groupby_lower_plot", "none")
-      updateSelectInput(session, "Groupby_upper_plot", "none")
-      updateSelectInput(session, "method_lower_plot", "auto")
-      updateSelectInput(session, "method_upper_plot", "auto")
+      updateSelectInput(session, "method_lower_plot", selected = "auto")
+      updateSelectInput(session, "method_upper_plot", selected = "auto")
+      updateSelectInput(session, "Groupby_lower_plot", selected = "none")
+      updateSelectInput(session, "Groupby_upper_plot", selected = "none")
       shinyWidgets::updateMaterialSwitch(session, "se_switch_lower_plot", value = TRUE)
       shinyWidgets::updateMaterialSwitch(session, "se_switch_upper_plot", value = TRUE)
+      shinyWidgets::updateMaterialSwitch(session, "group_switch_lower_plot", value = FALSE)
+      shinyWidgets::updateMaterialSwitch(session, "group_switch_upper_plot", value = FALSE)
+      plot_refresh(!plot_refresh())
     })
-
-
-
-
     # numeric input to manually change legend rows
     output$legend_val = renderUI({
       if(input$one_by_one_switch){
@@ -1507,6 +1506,7 @@ PLOTeR = function (){
         input$legend_value,
         zooming$x, zooming$y,
         d$a, input$refresh_plots_btn,
+        plot_refresh(),
         ignoreInit = T
       ) %>% debounce(500)
     plot_upper_plot = function(){
@@ -1578,6 +1578,7 @@ PLOTeR = function (){
         input$legend_value,
         zooming$x, zooming$y,
         d$a, input$refresh_plots_btn,
+        plot_refresh(),
         ignoreInit = T
       ) %>% debounce(500)
     plot_lower_plot = function() {
