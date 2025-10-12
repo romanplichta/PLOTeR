@@ -259,7 +259,7 @@ PLOTeR = function (){
                                                                                         shinyWidgets::materialSwitch("regre_switch",HTML(paste0("Regression",tags$sup("beta"))), status = "info")
                                                                        ),
                                                                        column(10,actionButton(inputId = 'subtract_upper_plot', label = "Subtract offset", width = "100%")),
-                                                                       column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
+                                                                       column(2,actionButton("bar39_upper", "",icon = icon("refresh", lib = "glyphicon"), status = "primary")),
                                                                        # shinyWidgets::materialSwitch("freeze_switch","Show Freeze", status = "primary", value = F, right = T),
                                                                        # conditionalPanel(condition = "input.freeze_switch == true",
                                                                        #                  selectInput("method3", "Method:", choices = c("Raw", "Fine"), selected = "Raw")
@@ -297,9 +297,17 @@ PLOTeR = function (){
                                                                                               shinyWidgets::materialSwitch("se_switch_lower_plot","SE",value = T, status = "info", width = "50%")
                                                                              ),
                                                                              column(10,actionButton(inputId = 'subtract_lower_plot', label = "Subtract offset", width = "100%")),
-                                                                             column(2,actionButton("bar39", "",icon = icon("refresh", lib = "glyphicon"), status = "primary"))
+                                                                             column(2,actionButton("bar39_lower", "",icon = icon("refresh", lib = "glyphicon"), status = "primary"))
                                                                       )
-                                                                    )))
+                                                                    ))),
+                                                 div(style = "width: 5px;"),
+                                                 div(
+                                                   actionButton(inputId = "refresh_plots_btn",
+                                                                label   = "",
+                                                                icon    = icon("refresh", lib = "glyphicon"),
+                                                                class   = "btn-default",
+                                                                title   = "")
+                                                 )
                                              )
                              ),
                              column(5,
@@ -1387,7 +1395,7 @@ PLOTeR = function (){
         15
       }
     }
-    #zooming
+    #zooming----
     zooming <- reactiveValues(x = NULL, y = NULL)
     observeEvent(input$RadiusPlot_dblclick, {
       brush <- input$RadiusPlot_brush
@@ -1407,6 +1415,22 @@ PLOTeR = function (){
         zooming$y <- NULL
       }
     })
+    observeEvent(input$refresh_plots_btn, {
+      zooming$x <- NULL
+      zooming$y <- NULL
+      shinyWidgets::updateMaterialSwitch(session, "group_switch_lower_plot", value = FALSE)
+      shinyWidgets::updateMaterialSwitch(session, "group_switch_upper_plot", value = FALSE)
+      updateSelectInput(session, "Groupby_lower_plot", "none")
+      updateSelectInput(session, "Groupby_upper_plot", "none")
+      updateSelectInput(session, "method_lower_plot", "auto")
+      updateSelectInput(session, "method_upper_plot", "auto")
+      shinyWidgets::updateMaterialSwitch(session, "se_switch_lower_plot", value = TRUE)
+      shinyWidgets::updateMaterialSwitch(session, "se_switch_upper_plot", value = TRUE)
+    })
+
+
+
+
     # numeric input to manually change legend rows
     output$legend_val = renderUI({
       if(input$one_by_one_switch){
@@ -1482,8 +1506,9 @@ PLOTeR = function (){
         input$one_by_one_group_select,
         input$legend_value,
         zooming$x, zooming$y,
+        d$a, input$refresh_plots_btn,
         ignoreInit = T
-      )
+      ) %>% debounce(500)
     plot_upper_plot = function(){
         rows <- if (!is.null(input$legend_value)) input$legend_value else legend_rows()
         data_upper_plot <- plot_plot_data() %>% {
@@ -1552,8 +1577,9 @@ PLOTeR = function (){
         input$one_by_one_group_select,
         input$legend_value,
         zooming$x, zooming$y,
+        d$a, input$refresh_plots_btn,
         ignoreInit = T
-      )
+      ) %>% debounce(500)
     plot_lower_plot = function() {
       data_lower_plot <- plot_plot_data() %>% {
         if (input$lower_plot_interval_input == "original") {
@@ -2928,11 +2954,14 @@ observe({
         ))
       }
     })
-    observeEvent(input$bar39,{
+    observeEvent(input$bar39_upper || input$refresh_plots_btn,{
       d$a = d$b[which(d$b[['date_time']] >= input$period[1] & d$b[['date_time']] <= input$period[2] & d$b[['.id']] %in% input$.id),]
 
     })
+    observeEvent(input$bar39_lower || input$refresh_plots_btn,{
+      d$a = d$b[which(d$b[['date_time']] >= input$period[1] & d$b[['date_time']] <= input$period[2] & d$b[['.id']] %in% input$.id),]
 
+    })
     stat_function = function(){
       if(is.null(zooming$x) && is.null(input$RadiusPlot_brush) && isTRUE(input$one_by_one_switch)){
         dat5 = isolate(d$a)
