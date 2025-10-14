@@ -70,7 +70,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage(paste0("PLOTeR ", "1.1.0"), position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", "1.1.1"), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -3861,11 +3861,8 @@ observe({
               dplyr::rename(Variable_freeze_orig = input$variable_prim) %>%
               dplyr::mutate(GRO_orig = Variable_freeze_orig,
                             FREEZE = Variable_freeze_orig) %>%
-              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < 0) ~ NA, TRUE ~ GRO_orig)
-                                                   # ,
-                                                    # = case_when(any(T1 < as.numeric(input$freeze_temp_input)) ~ FREEZE, TRUE ~ 0)
-                                                   ) %>%
-              group_by(.id) %>% mutate(GRO_orig = zoo::na.spline(GRO_orig, na.rm = F)) %>%
+              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < 0) ~ NA, TRUE ~ GRO_orig)) %>%
+              group_by(.id) %>% mutate(GRO_orig = zoo::na.approx(GRO_orig, na.rm = F)) %>%
               ungroup() %>%
               mutate(GRO_orig = if_else(is.na(Variable_freeze_orig), NA, GRO_orig)) %>%
               select(-day_freeze) %>% as.data.frame()
@@ -3888,6 +3885,7 @@ observe({
           rm(df6)
           assign('df', df, envir=envir)
           shiny::incProgress(2/10,  detail = "Done")
+        #  # advanced freeze subtrac based on dbscan
         # df6 =as.data.frame(isolate(d$a))
         # df6 = df6 %>% dplyr::group_by(.id) %>% dplyr::filter(!all(is.na(Radius))) %>% droplevels() %>% dplyr::mutate(date = floor_date(date_time, unit = "day")) %>%  dplyr::group_by(.id,date) %>%
         #   dplyr::mutate(T1_freeze = case_when(
