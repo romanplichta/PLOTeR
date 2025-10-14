@@ -3861,8 +3861,9 @@ observe({
               dplyr::rename(Variable_freeze_orig = input$variable_prim) %>%
               dplyr::mutate(GRO_orig = Variable_freeze_orig,
                             FREEZE = Variable_freeze_orig) %>%
-              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < 0) ~ NA, TRUE ~ GRO_orig)) %>%
+              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < input$freeze_temp_input) ~ NA, TRUE ~ GRO_orig)) %>%
               group_by(.id) %>% mutate(GRO_orig = zoo::na.approx(GRO_orig, na.rm = F)) %>%
+              tidyr::fill(GRO_orig, .direction = "downup") %>%
               ungroup() %>%
               mutate(GRO_orig = if_else(is.na(Variable_freeze_orig), NA, GRO_orig)) %>%
               select(-day_freeze) %>% as.data.frame()
@@ -3870,16 +3871,15 @@ observe({
             shiny::incProgress(2/10, detail = "GRO TWD")
             df6 = d$a
           }
-          df6 = df6 %>% mutate(year = lubridate::year(date_time)) %>% dplyr::group_by(.id) %>%
+          df6 = df6 %>% dplyr::group_by(.id) %>%
             dplyr::mutate(GRO = if_else(is.na(GRO_orig), NA , cummax(if_else(is.na(GRO_orig), -Inf, GRO_orig))),
                           TWD = if_else(is.na(GRO), NA, GRO_orig-GRO),
                           FREEZE = if_else(is.na(GRO_orig), NA, FREEZE-GRO_orig)) %>%
             mutate(FREEZE = if_else(FREEZE > 0, 0, FREEZE))%>%
-            dplyr::group_by(year, .add = T) %>%
             dplyr::mutate(GRO = GRO - first(na.omit(GRO)),
                           Variable_freeze_orig = Variable_freeze_orig - first(na.omit(Variable_freeze_orig))) %>%
             dplyr::ungroup() %>%
-            dplyr::select(-GRO_orig, -year) %>%
+            dplyr::select(-GRO_orig) %>%
             plyr::rename(., c("Variable_freeze_orig" = input$variable_prim)) %>% as.data.frame()
           df = df %>% dplyr::anti_join(df6, by = c(".id", "date_time")) %>% dplyr::bind_rows(df6) %>% droplevels() %>% dplyr::arrange(.id, date_time) %>% as.data.frame()
           rm(df6)
