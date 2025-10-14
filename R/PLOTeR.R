@@ -826,7 +826,6 @@ PLOTeR = function (){
           tags$style(HTML(type = "text/css", ".bootstrap-switch {margin-left: 20px; height: 35px; width: 200px}")),
           shinyWidgets::switchInput("GS_switch_plot", onLabel = "Upper", offLabel = "Lower",onStatus = "info",
                       offStatus = "info", value = T, inline = T, handleWidth = 99, labelWidth = 2),
-          numericInput("gam_k_value", label = "k", value = 20, min = 2, max = 30, step = 1, width = "80px"),
           tags$hr()
         )
       } else {
@@ -890,6 +889,7 @@ PLOTeR = function (){
         selectInput("GS_recalculate_method",
                     label = "Method:",
                     choices = c("fit_variable_rate","fit_model_rate")),
+        numericInput("gam_k_value", label = "k", value = 20, min = 2, max = 30, step = 1, width = "80px"),
         numericInput("upper_gro_thr",
                     "Total growth threshold (%):",
                     value = 98, min = 0, max = 100, step = 1),
