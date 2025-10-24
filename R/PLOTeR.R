@@ -70,7 +70,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage(paste0("PLOTeR ", "1.1.1"), position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", "1.1.2"), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -889,7 +889,7 @@ PLOTeR = function (){
         selectInput("GS_recalculate_method",
                     label = "Method:",
                     choices = c("fit_variable_rate","fit_model_rate")),
-        numericInput("gam_k_value", label = "k", value = 20, min = 2, max = 30, step = 1, width = "80px"),
+        numericInput("gam_k_value", label = "GAM smooth k", value = 20, min = 2, max = 30, step = 1, width = "80px"),
         numericInput("upper_gro_thr",
                     "Total growth threshold (%):",
                     value = 98, min = 0, max = 100, step = 1),
@@ -897,234 +897,245 @@ PLOTeR = function (){
                      HTML("No growth threshold (&mu;m):"),
                      value = 2, min = 0, max = 10, step = .5),
         selectInput("GS_Input_excl_month", "Ignore months:", selected = NULL, multiple = T, choices = c("1","2","3","4","5","6","7","8","9","10","11","12"), width = "200px"),
-        shinyWidgets::materialSwitch("GS_remove_freeze", label = "Remove freeze days?", status = "info"),
+        shinyWidgets::materialSwitch("GS_remove_freeze", label = "Remove freeze days?", status = "info", value = T),
+        conditionalPanel(condition = "input.GS_remove_freeze == true",
+                         numericInput("freeze_temp_input_GS", "Freeze temp. threshold",  min = -10, max = 10, step = 0.1, value = 0),
+                         numericInput("freeze_temp_mean_input_GS", "Mean daily temp. threshold",  min = 0, max = 10, step = 0.1, value = 5)),
         easyClose = T,
         footer = tagList(actionButton("GS_Button_recalculate_OK", "Recalculate", class = "btn-success"),
                          modalButton("Cancel")),
         size = "l"
       ))
     })
+observeEvent(input$GS_Button_recalculate_OK,{
+shiny::withProgress(
+message = paste0("Processing..."),
+detail = "Analysing GS",
+value = 0,
+{
+      if(length(levels(d$a[[".id"]]))>0){
+  if(isTRUE(input$GS_remove_freeze)){
+    if("T1" %in% colnames(d$a)) {
+      shiny::incProgress(2/10, detail = "Filtering freeze days")
+     data_fit = d$a %>% dplyr::mutate(day_freeze = lubridate:: floor_date(date_time, "day")) %>%
+        dplyr::mutate(Variable_freeze_orig = !!rlang::sym(input$variable_prim)) %>%
+        dplyr::mutate(Variable_freeze = !!rlang::sym(input$variable_prim)) %>%
+        group_by(.id, day_freeze) %>% mutate(Variable_freeze = dplyr::case_when(any(T1 < input$freeze_temp_input_GS) ~ NA,
+                                                                                mean(T1, na.rm = T) < input$freeze_temp_mean_input_GS ~ NA,
+                                                                                TRUE ~ Variable_freeze)) %>%
+        group_by(.id) %>% mutate(Variable_freeze = zoo::na.approx(Variable_freeze, na.rm = F)) %>%
+        tidyr::fill(Variable_freeze, .direction = "downup") %>%
+        ungroup() %>%
+        mutate(Variable_freeze = if_else(is.na(Variable_freeze_orig), NA, Variable_freeze)) %>%
+        dplyr::group_by(.id) %>%
+        dplyr::mutate(FREEZE = if_else(is.na(Variable_freeze), NA, Variable_freeze_orig-Variable_freeze)) %>%
+        dplyr::mutate(FREEZE = if_else(FREEZE > 0, 0, FREEZE)) %>%
+        select(-Variable_freeze_orig, -input$variable_prim, -day_freeze) %>%
+        plyr::rename(., c("Variable_freeze" = input$variable_prim)) %>% as.data.frame()
+      # data_fit = freeze_show() %>% dplyr::select(.id, date_time, freeze_show2) %>% plyr::rename(., c("freeze_show2" = input$variable_prim))
+    } else {
+      shiny::incProgress(2/10, detail = "Data uploaded")
+      data_fit = d$a
+    }
+  } else {
+    shiny::incProgress(4/10, detail = "Data uploaded")
+    data_fit = d$a
+  }
+  shiny::incProgress(2/10, detail = "Rates and model data")
+  data_fit = data_fit %>% dplyr::mutate(date_time = lubridate::floor_date(date_time, "day"), year = as.factor(lubridate::year(date_time)), month = as.factor(lubridate::month(date_time))) %>%
+    {if(isTRUE(input$GS_remove_freeze) & "FREEZE" %in% colnames(data_fit)){dplyr::select(.,.id, input$variable_prim, date_time, year, month, FREEZE)}else{dplyr::select(.,.id, input$variable_prim, date_time, year, month)}} %>%
+    dplyr::rename(Variable = input$variable_prim) %>%
+    {if(!is.null(input$GS_Input_excl_month)){ dplyr::mutate(.data = ., Variable = ifelse(month %in% input$GS_Input_excl_month, NA, Variable))} else {.}} %>%
+    dplyr::group_by(.id, year) %>%
+    dplyr::filter(!all(is.na(Variable))) %>% droplevels() %>%
+    group_by(.id, year, date_time) %>%
+    dplyr::summarise_if(is.numeric, mean, na.rm = T) %>%
+    as.data.frame()
 
-    observeEvent(input$GS_Button_recalculate_OK,{
-      shiny::withProgress(
-        message = paste0("Processing..."),
-        detail = "Analysing GS",
-        value = 0,
-        {
-        if(length(levels(d$a[[".id"]]))>0){
-          if(isTRUE(input$GS_remove_freeze)){
-            if("T1" %in% colnames(d$a)) {
-              shiny::incProgress(2/10, detail = "Filtering freeze days")
-              data_fit = d$a %>% dplyr::mutate(day_freeze = lubridate:: floor_date(date_time, "day")) %>%
-                dplyr::mutate(Variable_freeze_orig = !!rlang::sym(input$variable_prim)) %>%
-                dplyr::mutate(Variable_freeze = !!rlang::sym(input$variable_prim)) %>%
-                group_by(.id, day_freeze) %>% mutate(Variable_freeze = ifelse(any(T1 < 0), NA, Variable_freeze)) %>%
-                group_by(.id) %>% mutate(Variable_freeze = zoo::na.approx(Variable_freeze, na.rm = F)) %>%
-                ungroup() %>%
-                mutate(Variable_freeze = if_else(is.na(Variable_freeze_orig), NA, Variable_freeze)) %>%
-                select(-Variable_freeze_orig, -input$variable_prim, -day_freeze) %>%
-                plyr::rename(., c("Variable_freeze" = input$variable_prim)) %>%as.data.frame()
-                # data_fit = freeze_show() %>% dplyr::select(.id, date_time, freeze_show2) %>% plyr::rename(., c("freeze_show2" = input$variable_prim))
-            } else {
-              shiny::incProgress(2/10, detail = "Data uploaded")
-              data_fit = d$a
-            }
-          } else {
-            shiny::incProgress(4/10, detail = "Data uploaded")
-            data_fit = d$a
-          }
-          shiny::incProgress(2/10, detail = "Rates and model data")
-          data_fit = data_fit %>% dplyr::mutate(date_time = floor_date(date_time, "day"), year = as.factor(year(date_time)), month = as.factor(month(date_time))) %>%
-            select(.id, input$variable_prim, date_time, year, month) %>%
-            dplyr::rename(Variable = input$variable_prim) %>%
-            {if(!is.null(input$GS_Input_excl_month)){ dplyr::mutate(.data = ., Variable = ifelse(month %in% input$GS_Input_excl_month, NA, Variable))} else {.}} %>%
-            dplyr::group_by(.id, year) %>%
-            dplyr::filter(!all(is.na(Variable))) %>% droplevels() %>%
-            group_by(.id, year, date_time) %>%
-            dplyr::summarise_if(is.numeric, mean, na.rm = T) %>%
-            as.data.frame()
-          data_fit = data_fit %>% dplyr::group_by(.id, year) %>%
-            mutate(Variable = Variable - first(na.omit(Variable))) %>%
-            dplyr::mutate(Variable_rate = (Variable - dplyr::lag(Variable,14))/14) %>%
-            droplevels() %>% dplyr::group_by(.id, year) %>% dplyr::mutate(rows = 1:n()) %>%
-            as.data.frame()
-          # finding GS start
-          data_start = data_fit %>%
-            # drop out variable rates lower than input$no_growth_thr microns per day since these are not considered as growth
-            mutate(Variable_rate = if_else(Variable_rate < input$no_growth_thr, 0, Variable_rate)) %>%
-            tidyr::drop_na(Variable_rate) %>% droplevels() %>%
-            dplyr::group_by(.id, year) %>%
-            # gam model with defined k value
-            dplyr::mutate(model_rate = as.numeric(tryCatch(mgcv::predict.gam(mgcv::gam(formula = Variable_rate ~ s(rows, bs = "cs", k = input$gam_k_value), method = "REML")),error = function(e) return(0))))  %>%
-            # detecting intersection with 0 within model rate or variable rate
-            dplyr::mutate(inflect = c(diff(sign(model_rate)) != 0,FALSE), inflect_rad = c(diff(sign(Variable_rate)) != 0, FALSE)) %>%
-            # marking data before or after maximum model rate
-            # first quarter between min and max
-            dplyr::mutate(beforeafter = lubridate::floor_date(min_max(date_time[Variable == min_max(Variable, "min")], "min")+((min_max(date_time[Variable == min_max(Variable, "max")], "max") - min_max(date_time[Variable == min_max(Variable, "min")], "min"))/2), "day")) %>%
-            dplyr::mutate(model_rate = if_else(date_time <= beforeafter, model_rate, NA)) %>%
-            dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(model_rate == min_max(model_rate, method = "max"))],"Before", "After"))) %>%
-            # dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(Variable_rate == min_max(Variable_rate, method = "max"))] | beforeafter == as.character("Before"),"Before", "After"))) %>%
-            # drop year where before is missing
-            ungroup() %>%
-            dplyr::filter(beforeafter == "Before") %>%
-            droplevels() %>%
-            dplyr::group_by(.id, year) %>%
-            # marking data lower than 5% of maximum model rate
-            dplyr::mutate(lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
-            dplyr::mutate(mins = if_else(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
-            dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), date_time, NA)) %>%
-            dplyr::mutate(mins = if_else(mins == last(na.omit(mins)), mins, NA)) %>%
-            # marking data lower than 5% of maximum variable rate
-            dplyr::mutate(lows_rad = if_else(Variable_rate <= 0.05 * min_max(Variable_rate, method = "max"), TRUE, FALSE)) %>%
-            dplyr::mutate(mins_rad = if_else(Variable_rate < 0.05 * min_max(Variable_rate, method = "max"),NA,Variable_rate)) %>%
-            dplyr::mutate(mins_rad = if_else(Variable_rate == min_max(mins_rad, method = "min"), date_time, NA)) %>%
-            dplyr::mutate(mins_rad = if_else(mins_rad == last(na.omit(mins_rad)), mins_rad, NA)) %>%
-            # adding dates to GS corresponding with inflection point and lower than 5% threshold of growing rate
-            # version with model rate
-            dplyr::mutate(inflect = if_else(inflect == TRUE & lows == TRUE, date_time, NA)) %>%
-            dplyr::mutate(inflect_rad = if_else(inflect_rad == TRUE & lows_rad == TRUE, date_time, NA)) %>%
-            {if(input$GS_recalculate_method == "fit_model_rate"){
-              # filtering to last day in case of before maximum growth dates
-              dplyr::mutate(.data = ., GS_start = if_else(date_time == last(na.omit(inflect)), inflect, NA))
-            }else{
-              # filtering to first inflect_rad after the last inflect from model
-              dplyr::mutate(.data = ., inflect_rad = if_else(date_time >= last(na.omit(inflect)), inflect_rad, NA)) %>%
-                dplyr::mutate(GS_start = if_else(date_time == first(na.omit(inflect_rad)), inflect_rad, NA))
-            }} %>%
-            {if(input$GS_recalculate_method == "fit_model_rate"){
-              dplyr::mutate(.data = ., GS_start = case_when(all(is.na(GS_start)) ~ mins,.default = GS_start))
-            }else{
-              dplyr::mutate(.data = ., GS_start = case_when(all(is.na(GS_start)) ~ mins_rad, .default = GS_start))
-            }} %>%
-            # guarantee to have a single date
-            dplyr::mutate(GS_start = if_else(GS_start == min_max(GS_start), GS_start, NA))%>%
-            dplyr::ungroup() %>%
-            # dplyr::select(.id, date_time, GS_start) %>%
-            as.data.frame()
-          # detecting GS end
-          data_fit = data_fit %>%
-            # calculating GRO rate since already detected GS_start
-            dplyr::left_join(data_start %>% select(.id, date_time, GS_start), by = c(".id", "date_time")) %>%
-            group_by(.id, year) %>%
-            # calculating GRO, GRO_rate and adding 95% growth threshold
-            mutate(GRO = if_else(date_time<first(na.omit(GS_start)), NA, Variable)) %>% mutate(GRO = GRO - first(na.omit(GRO))) %>%
-            mutate(Variable = if_else(date_time<first(na.omit(GS_start)), NA, Variable)) %>% mutate(Variable = Variable - first(na.omit(Variable))) %>%
-            mutate(GRO = if_else(is.na(GRO) & date_time < first(na.omit(GS_start)), 0, if_else(is.na(GRO),NA ,cummax(if_else(is.na(GRO), -Inf, GRO))))) %>%
-            mutate(GRO_rate = (GRO - dplyr::lag(GRO,14))/14) %>%
-            mutate(GRO_rate = if_else(GRO_rate < input$no_growth_thr, 0, GRO_rate)) %>%
-            mutate(GRO_upp_thr = (input$upper_gro_thr*0.01)*min_max(GRO, "max"))
-          rm(data_start)
-          data_fit = data_fit %>% tidyr::drop_na(GRO_rate) %>% droplevels() %>% dplyr::group_by(.id, year) %>%
-            # gam model with default k value
-            dplyr::mutate(model_rate = as.numeric(tryCatch(mgcv::predict.gam(mgcv::gam(formula = GRO_rate ~ s(rows, bs = "cs", k = 20), method = "REML")),error = function(e) return(0))))  %>%
-            # detecting inflection points and intersections with 0 within model
-            dplyr::mutate(inflect = ifelse(c(FALSE, diff(diff(model_rate)>0)>0, F), TRUE, FALSE)) %>%
-            dplyr::mutate(inflect2 = c(diff(sign(model_rate)) != 0, FALSE))  %>%
-            dplyr::mutate(inflect = if_else(inflect == TRUE, inflect, inflect2)) %>%
-            # detecting intersections with 0 within variable rate
-            dplyr::mutate(inflect_rad = c(FALSE, diff(sign(GRO_rate)) != 0))  %>%
-            # marking data before or after model maximal rate
-            dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(model_rate == min_max(model_rate, method = "max"))],"Before", "After"))) %>%
-            # drop year where before or after is missing
-            dplyr::group_by(.id, year) %>%
-            dplyr::filter(any("Before" %in% beforeafter & "After" %in% beforeafter)) %>% droplevels() %>%
-            # marking data lower than 5% of maximum model rate
-            dplyr::mutate(lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
-            dplyr::mutate(lows_rad = if_else(GRO_rate <= 0.05 * min_max(GRO_rate, method = "max"), TRUE, FALSE)) %>%
-            # and finding minimas
-            # dplyr::group_by(beforeafter,.add = TRUE) %>%
-            dplyr::mutate(mins = ifelse(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
-            dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), TRUE, NA)) %>%
-            dplyr::mutate(mins_rad = ifelse(GRO_rate < 0.05 * min_max(GRO_rate, method = "max"),GRO_rate, NA)) %>%
-            dplyr::mutate(mins_rad = if_else(GRO_rate == min_max(mins_rad, method = "min"), TRUE, NA)) %>%
-            dplyr::mutate(inflect = if_else((inflect == TRUE | mins == TRUE) & lows == TRUE, date_time, NA)) %>%
-            dplyr::mutate(inflect_rad = if_else(inflect_rad == TRUE & lows_rad == TRUE, date_time, NA)) %>%
-            dplyr::group_by(.id, year) %>%
-            # detecting end
-            # finding data over the upper growth threshold and marking the first one
-            #moving GRO 14 days ahead to be comparable with lagged GRO_rate
-            dplyr::mutate(inflect = if_else(lag(GRO,14) >= GRO_upp_thr, inflect, NA)) %>%
-            dplyr::mutate(inflect_rad = if_else(lag(GRO,14) >= GRO_upp_thr, inflect_rad, NA)) %>%
-            dplyr::mutate(inflect = if_else(beforeafter == "before", NA, if_else(date_time == first(na.omit(inflect)), inflect, NA))) %>%
-            dplyr::mutate(inflect_rad = if_else(date_time <= first(na.omit(inflect)), inflect_rad, NA)) %>%
-            {if(input$GS_recalculate_method == "fit_model_rate"){
-              # filtering to first inflection point or intersection in a model above the upper growth threshold
-              dplyr::mutate(.data = ., GS_end = if_else(date_time == first(na.omit(inflect)),inflect, NA))
-            }else{
-              # filtering to first inflect_rad after the last inflect from model
-              dplyr::mutate(.data = ., GS_end = if_else(date_time == first(na.omit(inflect_rad)), inflect_rad, NA))
-            }} %>%
-            dplyr::mutate(GS_end = GS_end - lubridate::days(14))  %>%
-            dplyr::mutate(GS_end = lead(GS_end, 14)) %>%
-            # if no GSend detected move it to the upper growth threshold
-            dplyr::group_by(.id, year) %>% mutate(GS_end = case_when(beforeafter == "Before" ~ GS_end,
-                                                                     beforeafter == "After" & any(!is.na(GS_end[beforeafter == "After"])) ~ GS_end,
-                                                                     GRO >= GRO_upp_thr & beforeafter == "After" & cumsum(GRO >= GRO_upp_thr) == 1 ~ date_time +days(1))) %>%
-            dplyr::ungroup() %>%
-            mutate(date_time = as.POSIXct(date_time, format = '%y-%m-%d %H:%M:%S', tz = "UTC")) %>%
-            as.data.frame()
-          # refit GS_start in case of model method fitting
-          data_fit = data_fit %>% {if(input$GS_recalculate_method == "fit_model_rate"){
-            dplyr::group_by(.data = ., .id, year) %>%
-              # detecting intersection with 0 within model rate or variable rate
-              dplyr::mutate(inflect = c(diff(sign(model_rate)) != 0,FALSE)) %>%
-              dplyr::mutate(inflect = if_else(beforeafter == "After", NA, inflect)) %>%
-              # marking data lower than 5% of maximum model rate
-              dplyr::mutate(lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
-              dplyr::mutate(mins = if_else(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
-              dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), date_time, NA)) %>%
-              dplyr::mutate(mins = if_else(mins == last(na.omit(mins)), mins, NA)) %>%
-              # adding dates to GS corresponding with inflection point and lower than 5% threshold of growing rate
-              # version with model rate
-              dplyr::mutate(inflect = if_else(inflect == TRUE & lows == TRUE, date_time, NA)) %>%
-              # filtering to last day in case of before maximum growth dates
-              dplyr::mutate(GS_start = if_else(date_time == last(na.omit(inflect)), inflect, NA)) %>%
-              dplyr::mutate(GS_start = case_when(all(is.na(GS_start)) ~ mins,.default = GS_start)) %>%
-              # guarantee to have a single date
-              dplyr::mutate(GS_start = if_else(GS_start == min_max(GS_start), GS_start, NA))%>%
-              dplyr::ungroup() %>%
-              # dplyr::select(.id, date_time, GS_start) %>%
-              as.data.frame()}else{.}} %>%
-            select(.id, date_time, , year, GS_start, GS_end, model_rate)
-          # merging with original rates, trimming GRO and GRO rates and calculate TWD
-          data_fit = d$a %>%
-            select(where(is.factor), .id, input$variable_prim, date_time) %>%
-            dplyr::mutate(date_time = floor_date(date_time, "day"), year = as.factor(year(date_time))) %>%
-            dplyr::rename(Variable = input$variable_prim) %>%
-            dplyr::group_by(.id, year) %>%
-            dplyr::filter(!all(is.na(Variable))) %>% droplevels() %>%
-            group_by(.id, year, date_time) %>%
-            dplyr::summarise_if(is.numeric, mean, na.rm = T) %>%
-            ungroup() %>%
-            dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
-            group_by(.id, year) %>%
-            dplyr::filter(!all(is.na(Variable))) %>% droplevels() %>%
-            mutate(Variable = Variable - Variable[date_time == first(na.omit(GS_start))]) %>%
-            mutate(Variable_rate = (Variable - dplyr::lag(Variable,14))/14) %>%
-            mutate(GRO = if_else(date_time<first(na.omit(GS_start)), 0, Variable, missing = Variable)) %>%
-            mutate(GRO = if_else(is.na(GRO), NA , cummax(if_else(is.na(GRO), -Inf, GRO)))) %>%
-            mutate(GRO_rate = (GRO - dplyr::lag(GRO,14))/14) %>%
-            mutate(GRO_rate = if_else(GRO_rate < input$no_growth_thr, 0, GRO_rate)) %>%
-            mutate(TWD = if_else(is.na(Variable) | GRO <= 0, NA, Variable-GRO)) %>%
-            as.data.frame()
-          shiny::incProgress(2/10, detail = "Merging data")
-          d$c = d$a %>%
-            dplyr::select(-tidyr::matches("GS_")) %>%
-            dplyr::group_by(.id) %>%
-            dplyr::filter(lubridate::hour(date_time) == 00 & lubridate::minute(date_time) == 00) %>%
-            ungroup() %>%
-            dplyr::mutate(year = as.factor(lubridate::year(date_time))) %>%
-            dplyr::select(-any_of(setdiff(colnames(data_fit), c(".id", "date_time", "year")))) %>%
-            dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
-            as.data.frame()
-          rm(data_fit)
-          removeModal()
-          shiny::incProgress(2/10, detail = "Done")
-          } else {
-          NULL
-        }
-      })
-    })
+  data_fit = data_fit %>% dplyr::group_by(.id, year) %>%
+    mutate(Variable = Variable - first(na.omit(Variable))) %>%
+    dplyr::mutate(Variable_rate = (Variable - dplyr::lag(Variable,14))/14) %>%
+    droplevels() %>% dplyr::group_by(.id, year) %>% dplyr::mutate(rows = 1:n()) %>%
+    as.data.frame()
+  # finding GS start
+ data_start = data_fit %>%
+    # drop out variable rates lower than input$no_growth_thr microns per day since these are not considered as growth
+    mutate(Variable_rate = if_else(Variable_rate < input$no_growth_thr, 0, Variable_rate)) %>%
+    tidyr::drop_na(Variable_rate) %>% droplevels() %>%
+    dplyr::group_by(.id, year) %>%
+    # gam model with defined k value
+    dplyr::mutate(model_rate = as.numeric(tryCatch(mgcv::predict.gam(mgcv::gam(formula = Variable_rate ~ s(rows, bs = "cs", k = input$gam_k_value), method = "REML")),error = function(e) return(0))))  %>%
+    # detecting intersection with 0 within model rate or variable rate
+    dplyr::mutate(inflect = c(diff(sign(model_rate)) != 0,FALSE), inflect_rad = c(diff(sign(Variable_rate)) != 0, FALSE)) %>%
+    # marking data before or after maximum model rate
+    # first quarter between min and max
+    dplyr::mutate(beforeafter = lubridate::floor_date(min_max(date_time[Variable == min_max(Variable, "min")], "min")+((min_max(date_time[Variable == min_max(Variable, "max")], "max") - min_max(date_time[Variable == min_max(Variable, "min")], "min"))/2), "day")) %>%
+    dplyr::mutate(model_rate = if_else(date_time <= beforeafter, model_rate, NA)) %>%
+    dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(model_rate == min_max(model_rate, method = "max"))],"Before", "After"))) %>%
+    # dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(Variable_rate == min_max(Variable_rate, method = "max"))] | beforeafter == as.character("Before"),"Before", "After"))) %>%
+    # drop year where before is missing
+    ungroup() %>%
+    dplyr::filter(beforeafter == "Before") %>%
+    droplevels() %>%
+    dplyr::group_by(.id, year) %>%
+    {if(input$GS_recalculate_method == "fit_model_rate"){
+      # marking data lower than 5% of maximum model rate
+      dplyr::mutate(.data = .,lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
+      dplyr::mutate(mins = if_else(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
+      dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), date_time, NA)) %>%
+      dplyr::mutate(mins = if_else(mins == last(na.omit(mins)), mins, NA)) %>%
+      # adding dates to GS corresponding with inflection point and lower than 5% threshold of growing rate
+      # version with model rate
+      dplyr::mutate(inflect = if_else(inflect == TRUE & lows == TRUE, date_time, NA)) %>%
+      # filtering to last day in case of before maximum growth dates
+      dplyr::mutate(GS_start = if_else(date_time == last(na.omit(inflect)), inflect, NA))
+    }else{
+      # marking data lower than 5% of maximum variable rate
+      dplyr::mutate(.data = ., lows_rad = if_else(Variable_rate <= 0.05 * min_max(Variable_rate, method = "max"), TRUE, FALSE)) %>%
+      dplyr::mutate(mins_rad = if_else(Variable_rate < 0.05 * min_max(Variable_rate, method = "max"),NA,Variable_rate)) %>%
+      dplyr::mutate(mins_rad = if_else(Variable_rate == min_max(mins_rad, method = "min"), date_time, NA)) %>%
+      dplyr::mutate(mins_rad = if_else(mins_rad == last(na.omit(mins_rad)), mins_rad, NA)) %>%
+      # adding dates to GS corresponding with inflection point and lower than 5% threshold of growing rate
+      dplyr::mutate(inflect_rad = if_else(inflect_rad == TRUE & lows_rad == TRUE, date_time, NA)) %>%
+      # filtering to first inflect_rad after the last inflect from model
+      dplyr::mutate(inflect_rad = if_else(date_time >= last(na.omit(inflect)), inflect_rad, NA)) %>%
+        dplyr::mutate(GS_start = if_else(date_time == first(na.omit(inflect_rad)), inflect_rad, NA))
+    }} %>%
+    {if(input$GS_recalculate_method == "fit_model_rate"){
+      dplyr::mutate(.data = ., GS_start = case_when(all(is.na(GS_start)) ~ mins,.default = GS_start))
+    }else{
+      dplyr::mutate(.data = ., GS_start = case_when(all(is.na(GS_start)) ~ mins_rad, .default = GS_start))
+    }} %>%
+    # guarantee to have a single date
+    dplyr::mutate(GS_start = if_else(GS_start == min_max(GS_start), GS_start, NA))%>%
+    dplyr::ungroup() %>%
+    # dplyr::select(.id, date_time, GS_start) %>%
+    as.data.frame()
+    # detecting GS end
+  data_fit = data_fit %>%
+    # calculating GRO rate since already detected GS_start
+    dplyr::left_join(data_start %>% select(.id, date_time, GS_start), by = c(".id", "date_time")) %>%
+    group_by(.id, year) %>%
+    mutate(GRO = case_when(all(is.na(GS_start)) ~ Variable - first(na.omit(Variable)),
+                         TRUE ~ Variable - Variable[date_time == first(na.omit(GS_start))])) %>%
+    mutate(Variable = GRO) %>%
+    mutate(GRO = if_else(date_time < first(na.omit(GS_start)), 0, if_else(is.na(GRO),NA ,cummax(if_else(is.na(GRO), -Inf, GRO))))) %>%
+    mutate(GRO_rate = (GRO - dplyr::lag(GRO,14))/14) %>%
+    mutate(GRO_rate = if_else(GRO_rate < input$no_growth_thr, 0, GRO_rate)) %>%
+    mutate(GRO_upp_thr = (input$upper_gro_thr*0.01)*min_max(GRO, "max"))
+  rm(data_start)
+  data_fit = data_fit %>% tidyr::drop_na(GRO_rate) %>% droplevels() %>% dplyr::group_by(.id, year) %>%
+    # gam model with default k value
+    dplyr::mutate(model_rate = as.numeric(tryCatch(mgcv::predict.gam(mgcv::gam(formula = GRO_rate ~ s(rows, bs = "cs", k = 20), method = "REML")),error = function(e) return(0))))  %>%
+    # detecting inflection points and intersections with 0 within model
+    dplyr::mutate(inflect = ifelse(c(FALSE, diff(diff(model_rate)>0)>0, F), TRUE, FALSE)) %>%
+    dplyr::mutate(inflect2 = c(diff(sign(model_rate)) != 0, FALSE))  %>%
+    dplyr::mutate(inflect = if_else(inflect == TRUE, inflect, inflect2)) %>%
+    dplyr::select(-inflect2) %>%
+    # detecting intersections with 0 within variable rate
+    dplyr::mutate(inflect_rad = c(FALSE, diff(sign(GRO_rate)) != 0))  %>%
+    # marking data before or after model maximal rate
+    dplyr::mutate(beforeafter = as.factor(ifelse(date_time <= date_time[which(model_rate == min_max(model_rate, method = "max"))],"Before", "After"))) %>%
+    # drop year where before or after is missing
+    dplyr::group_by(.id, year) %>%
+    dplyr::filter(any("Before" %in% beforeafter & "After" %in% beforeafter)) %>% droplevels() %>%
+    # detecting end
+    {if(input$GS_recalculate_method == "fit_model_rate"){
+      # marking data lower than 5% of maximum model rate
+      dplyr::mutate(.data = ., lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
+      # and finding minimas
+      dplyr::mutate(mins = ifelse(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
+      dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), TRUE, NA)) %>%
+      dplyr::mutate(inflect = if_else((inflect == TRUE | mins == TRUE) & lows == TRUE, date_time, NA)) %>%
+      # finding data over the upper growth threshold and marking the first one
+      #moving GRO 14 days ahead to be comparable with lagged GRO_rate
+      dplyr::mutate(inflect = if_else(lag(GRO,14) >= GRO_upp_thr, inflect, NA)) %>%
+      dplyr::mutate(inflect = if_else(beforeafter == "before", NA, if_else(date_time == first(na.omit(inflect)), inflect, NA))) %>%
+      # filtering to first inflection point or intersection in a model above the upper growth threshold
+      dplyr::mutate(GS_end = if_else(date_time == first(na.omit(inflect)),inflect, NA))
+    }else{
+      # marking data lower than 5% of maximum variable rate
+      dplyr::mutate(.data = ., lows_rad = if_else(GRO_rate <= 0.05 * min_max(GRO_rate, method = "max"), TRUE, FALSE)) %>%
+      # and finding minimas
+      dplyr::mutate(mins_rad = ifelse(GRO_rate < 0.05 * min_max(GRO_rate, method = "max"),GRO_rate, NA)) %>%
+      dplyr::mutate(mins_rad = if_else(GRO_rate == min_max(mins_rad, method = "min"), TRUE, NA)) %>%
+      dplyr::mutate(inflect_rad = if_else(inflect_rad == TRUE & lows_rad == TRUE, date_time, NA)) %>%
+      # finding data over the upper growth threshold and marking the first one
+      #moving GRO 14 days ahead to be comparable with lagged GRO_rate
+      dplyr::mutate(inflect_rad = if_else(lag(GRO,14) >= GRO_upp_thr, inflect_rad, NA)) %>%
+      dplyr::mutate(inflect_rad = if_else(date_time <= first(na.omit(inflect)), inflect_rad, NA)) %>%
+      # filtering to first inflect_rad after the last inflect from model
+      dplyr::mutate(GS_end = if_else(date_time == first(na.omit(inflect_rad)), inflect_rad, NA))
+    }} %>%
+    dplyr::mutate(GS_end = GS_end - lubridate::days(14))  %>%
+    dplyr::mutate(GS_end = lead(GS_end, 14)) %>%
+    # if no GSend detected move it to the upper growth threshold
+    mutate(GS_end = case_when(beforeafter == "Before" ~ GS_end,
+                                                             beforeafter == "After" & any(!is.na(GS_end[beforeafter == "After"])) ~ GS_end,
+                                                             GRO >= GRO_upp_thr & beforeafter == "After" & cumsum(GRO >= GRO_upp_thr) == 1 ~ date_time +lubridate::days(1))) %>%
+    dplyr::ungroup() %>%
+    mutate(date_time = as.POSIXct(date_time, format = '%y-%m-%d %H:%M:%S', tz = "UTC")) %>%
+    as.data.frame()
+    # refit GS_start in case of model method fitting
+  data_fit = data_fit %>% {if(input$GS_recalculate_method == "fit_model_rate"){
+    dplyr::group_by(.data = ., .id, year) %>%
+      # detecting intersection with 0 within model rate or variable rate
+      dplyr::mutate(inflect = c(diff(sign(model_rate)) != 0,FALSE)) %>%
+      dplyr::mutate(inflect = if_else(beforeafter == "After", NA, inflect)) %>%
+      # marking data lower than 5% of maximum model rate
+      dplyr::mutate(lows = if_else(model_rate <= 0.05 * min_max(model_rate, method = "max"), TRUE, FALSE)) %>%
+      dplyr::mutate(mins = if_else(model_rate < 0.05 * min_max(model_rate, method = "max"),model_rate, NA)) %>%
+      dplyr::mutate(mins = if_else(model_rate == min_max(mins, method = "min"), date_time, NA)) %>%
+      dplyr::mutate(mins = if_else(mins == last(na.omit(mins)), mins, NA)) %>%
+      # adding dates to GS corresponding with inflection point and lower than 5% threshold of growing rate
+      # version with model rate
+      dplyr::mutate(inflect = if_else(inflect == TRUE & lows == TRUE, date_time, NA)) %>%
+      # filtering to last day in case of before maximum growth dates
+      dplyr::mutate(GS_start = if_else(date_time == last(na.omit(inflect)), inflect, NA)) %>%
+      dplyr::mutate(GS_start = case_when(all(is.na(GS_start)) ~ mins,.default = GS_start)) %>%
+      # guarantee to have a single date
+      dplyr::mutate(GS_start = if_else(GS_start == min_max(GS_start), GS_start, NA))%>%
+      dplyr::ungroup() %>%
+      # dplyr::select(.id, date_time, GS_start) %>%
+      as.data.frame()}else{.}} %>%
+    select(any_of(c(".id", "date_time", "year", "Variable", "FREEZE", "Variable_rate", "GS_start", "GS_end", "GRO", "GRO_rate", "model_rate")))
+  # merging with original rates, trimming GRO and GRO rates and calculate TWD
+  data_fit = d$a %>%
+    dplyr::select(where(is.factor), .id, input$variable_prim, date_time) %>%
+    dplyr::mutate(date_time = lubridate::floor_date(date_time, "day"), year = as.factor(lubridate::year(date_time))) %>%
+    # dplyr::rename(Variable = input$variable_prim) %>%
+    dplyr::group_by(.id, year) %>%
+    dplyr::filter(!all(is.na(!!rlang::sym(input$variable_prim)))) %>% droplevels() %>%
+    group_by(.id, year, date_time) %>%
+    dplyr::summarise_if(is.numeric, mean, na.rm = T) %>%
+    ungroup() %>%
+    dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
+    group_by(.id, year) %>%
+    mutate(!!rlang::sym(input$variable_prim) := case_when(all(is.na(GS_start)) ~ !!rlang::sym(input$variable_prim) - first(na.omit(!!rlang::sym(input$variable_prim))),
+                                TRUE ~ !!rlang::sym(input$variable_prim) - (!!rlang::sym(input$variable_prim))[date_time == first(na.omit(GS_start))]),
+      TWD = case_when(is.na(Variable) ~ NA,
+                           GRO <= 0 ~ 0,
+                           TRUE ~ Variable-GRO)) %>%
+    as.data.frame()
+  shiny::incProgress(2/10, detail = "Merging data")
+  d$c = d$a %>%
+    dplyr::select(-tidyr::matches("GS_")) %>%
+    dplyr::group_by(.id) %>%
+    dplyr::filter(lubridate::hour(date_time) == 00 & lubridate::minute(date_time) == 00) %>%
+    ungroup() %>%
+    dplyr::mutate(year = as.factor(lubridate::year(date_time))) %>%
+    dplyr::select(-any_of(setdiff(colnames(data_fit), c(".id", "date_time", "year")))) %>%
+    dplyr::left_join(data_fit, by = c(".id", "date_time", "year")) %>%
+    as.data.frame()
+  rm(data_fit)
+  removeModal()
+  shiny::incProgress(2/10, detail = "Done")
+} else {
+  NULL
+}
+})
+})
+
     observeEvent(input$GS_Button_move,{
       if(isFALSE(input$one_by_one_switch)){
         r = row.names(brushedPoints(isolate(d$c)[complete.cases(isolate(d$c)[,input$variable_prim]) & isolate(d$c)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"))
@@ -1235,7 +1246,6 @@ PLOTeR = function (){
       }
       rm(df3, data_fit2)
     })
-# GS_summary_save_names = reactiveValues(name = 0)
     observeEvent(input$GS_Button_summary,{
       shiny::withProgress(
         message = paste0("Processing..."),
@@ -1252,7 +1262,7 @@ PLOTeR = function (){
           GS_summary_GS = isolate(d$c) %>% group_by(.id, year) %>% filter(date_time >= first(na.omit(GS_start)) & date_time <= last(na.omit(GS_end))) %>% dplyr::summarise(GRO_tot = min_max(GRO, "max")-min_max(GRO), TWD_tot = if_else(all(is.na(TWD)), NA, sum(na.omit(TWD))))
           GS_summary = GS_summary %>% dplyr::ungroup() %>% dplyr::left_join(GS_summary_twd, by = c(".id", "year")) %>% dplyr::left_join(GS_summary_GS, by = c(".id", "year")) %>% dplyr::left_join(GS_summary_rate, by = c(".id", "year")) %>% dplyr::left_join(GS_summary_rate_model, by = c(".id", "year")) %>% droplevels() %>% relocate(.id, year, GS_start, GS_end, GS_start_doy, GS_end_doy, GS_length, GRO_tot, GRO_tot_full, TWD_tot, TWD_min, TWD_min_date, Max_variable_rate, Max_rate_date, Max_model_rate, Max_model_rate_date) %>% as.data.frame()
           rm(GS_summary_rate, GS_summary_rate_model, GS_summary_GS)
-          GS_df_rates = isolate(d$c) %>% dplyr::select(.id, date_time, year, Variable_rate, model_rate, Variable, GRO, TWD, GRO_rate) %>% droplevels() %>% as.data.frame()
+          GS_df_rates = isolate(d$c) %>% dplyr::select(any_of(c(".id", "date_time", "year", "Variable_rate", "model_rate", "Variable", "GRO", "TWD", "GRO_rate", "FREEZE", input$variable_prim))) %>% droplevels() %>% as.data.frame()
           GS_add_GS = GS_summary %>% dplyr::select(.id, year, GS_start, GS_end)
           GS_summary_perc = GS_df_rates %>%
             dplyr::left_join(GS_add_GS, by = c(".id", "year")) %>%
@@ -2135,12 +2145,7 @@ PLOTeR = function (){
       }
       ggplot(data = plot_prim_cleaner_mode_data, aes(!!rlang::sym("date_time"), !!rlang::sym(input$variable_prim), colour = !!rlang::sym(".id"))) +
         geom_line()+
-      # change7----
-      # {if(isFALSE(input$fine_mode)){{if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}}
-      #   else{{if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max, ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}}}+
         {if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}+
-      # {if(isFALSE(input$fine_mode)){{if(length(rect_ids_levelup)>0 & !is.null(rect_data_levelup) & nrow(rect_data_levelup)>0){geom_rect(data = rect_data_levelup, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id, colour = .id),alpha = 0.05, show.legend = F)}}}
-      #   else{{if(length(rect_ids_levelup)>0 & !is.null(rect_data_levelup) & nrow(rect_data_levelup)>0){geom_rect(data = rect_data_levelup, inherit.aes = F, aes(xmin = day_min, xmax = day_max, ymin = -Inf, ymax = Inf, fill = .id, colour = .id),alpha = 0.05, show.legend = F)}}}}+
         {if(length(rect_ids_levelup)>0 & !is.null(rect_data_levelup) & nrow(rect_data_levelup)>0){geom_rect(data = rect_data_levelup, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id, colour = .id),alpha = 0.05, show.legend = F)}}+
         coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
               theme_bw()
@@ -2157,8 +2162,6 @@ PLOTeR = function (){
           actionButton("Cleaner_Button_save", "Save"),
           actionButton(inputId = "cleaner_refresh_btn", label = "Refresh", style = "margin-left: 10px"),
           actionButton(inputId = "cleaner_upload_btn", label = "Upload"),
-          # change7----
-          # shinyWidgets::materialSwitch("fine_mode", "Fine mode", status = "primary",value = F),
           tags$hr()
         )
       } else {
@@ -2174,15 +2177,8 @@ observeEvent(input$Cleaner_Button_delete,{
   }else{
     df10 = brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time")
   }
-    # chnage7----
-    # if(isFALSE(input$fine_mode)){
       df10 = df10 %>% droplevels() %>% mutate(day = floor_date(date_time, "day")) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("outliers_", input$variable_prim), .x),everything()) %>%
         dplyr::mutate(across(starts_with("outliers"), ~TRUE)) %>% distinct_all(.keep_all = T)
-    # }else{
-    #   df10 = df10 %>% droplevels() %>% mutate(day = date_time) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("outliers_", input$variable_prim), .x),everything()) %>%
-    # dplyr::mutate(across(starts_with("outliers"), ~TRUE)) %>% distinct_all(.keep_all = T)
-    # }
-
 
   if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
       if(is.null(cleaner_mode_rect$cleaning_meta)){
@@ -2211,14 +2207,8 @@ observeEvent(input$Cleaner_Button_keep,{
   }else{
     df10 = brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time")
   }
-    # change7----
-    # if(isFALSE(input$fine_mode)){
       df10 = df10 %>% droplevels() %>% mutate(day = floor_date(date_time, "day")) %>% select(.id, day, input$variable_prim) %>%
         dplyr::mutate(outliers = FALSE, levelup = FALSE) %>% plyr::rename(., c("outliers" = paste0("outliers_", input$variable_prim), "levelup" = paste0("levelup_", input$variable_prim))) %>% select(-input$variable_prim) %>% distinct_all(.keep_all = T)
-    # }else{
-    #   df10 = df10 %>% droplevels() %>% mutate(day = date_time) %>% select(.id, day, input$variable_prim) %>%
-    #     dplyr::mutate(outliers = FALSE, levelup = FALSE) %>% plyr::rename(., c("outliers" = paste0("outliers_", input$variable_prim), "levelup" = paste0("levelup_", input$variable_prim))) %>% select(-input$variable_prim) %>% distinct_all(.keep_all = T)
-    # }
 
   if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
       if(is.null(cleaner_mode_rect$cleaning_meta)){
@@ -2245,10 +2235,6 @@ observeEvent(input$Cleaner_Button_apply,{
       if(!is.null(cleaner_mode_rect$cleaning_meta)){
         for(i in colnames(cleaner_mode_rect$cleaning_meta %>% select_if(is.logical) %>% select(starts_with("outliers_")))) {
           meta_tmp = cleaner_mode_rect$cleaning_meta[c(".id","day", i)]
-          # change7----
-          #   df = d$b %>% {if(isFALSE(input$fine_mode)) mutate(.data = .,day = floor_date(date_time, "day")) else mutate(.data = .,day = date_time)} %>% left_join(meta_tmp, by = c(".id", "day")) %>%
-          #     dplyr::mutate(across(starts_with(sub("outliers_", "", i, fixed=T)), ~ replace(., get(paste0(i)) == TRUE, NA))) %>%
-          #     dplyr::select(!starts_with("outliers_"))
           df = d$b %>% mutate(day = floor_date(date_time, "day")) %>% left_join(meta_tmp, by = c(".id", "day")) %>%
             dplyr::mutate(across(starts_with(sub("outliers_", "", i, fixed=T)), ~ replace(., get(paste0(i)) == TRUE, NA))) %>%
             dplyr::select(!starts_with("outliers_"))
@@ -2259,19 +2245,12 @@ observeEvent(input$Cleaner_Button_apply,{
           meta_tmp = cleaner_mode_rect$cleaning_meta[c(".id","day", i)]
           meta_tmp = meta_tmp %>% dplyr::arrange(.id, day) %>% group_by(.id) %>% mutate_if(is.logical, list(~ na_if(.,T))) %>% filter_if(is.logical, ~is.na(.)) %>%
             mutate(levelup_order = cleaner_groups(day)) %>% select(-any_of(i))
-          # change7----
-          # meta_tmp_before = meta_tmp %>% group_by(.id, levelup_order) %>% filter(row_number() == 1) %>%
-          #  {if(isFALSE(input$fine_mode)) mutate(.data = ., day = day-lubridate::days(1)) else .}
           meta_tmp_before = meta_tmp %>% group_by(.id, levelup_order) %>% filter(row_number() == 1) %>%
             mutate(day = day-lubridate::days(1))
 
           meta_tmp = meta_tmp %>% bind_rows(meta_tmp_before) %>% arrange(.id, day) %>% group_by(.id, levelup_order)
           rm(meta_tmp_before)
           cleaner_data_tmp = df %>% select(.id, date_time, any_of(sub("levelup_", "",i))) %>% filter(.id %in% levels(meta_tmp$.id)) %>% droplevels() %>% group_by(.id )%>% arrange(date_time, .by_group = T) %>% mutate(nas = !!rlang::sym(sub("levelup_", "",i))) %>% as.data.frame()
-          # change7----
-          # meta_tmp =  cleaner_data_tmp %>% {if(isFALSE(input$fine_mode)) mutate(.data = ., day = lubridate::date(date_time)) else mutate(.data = ., day = date_time)} %>% left_join(meta_tmp, by = c(".id", "day")) %>% filter(!is.na(levelup_order)) %>% group_by(.id, levelup_order, day) %>% filter(row_number() == n()) %>% select(-date_time) %>%
-          #   dplyr::rename(levelup_data = sub("levelup_", "",i)) %>%
-          #   group_by(.id, levelup_order) %>% mutate(levelup_data_cumsum = ifelse(row_number() == 1, first(levelup_data)-last(levelup_data), 0), levelup_data = first(na.omit(levelup_data))) %>% group_by(.id) %>% mutate(levelup_data_cumsum = cumsum(levelup_data_cumsum)) %>% as.data.frame()
           meta_tmp =  cleaner_data_tmp %>% mutate(day = lubridate::date(date_time)) %>% left_join(meta_tmp, by = c(".id", "day")) %>% filter(!is.na(levelup_order)) %>% group_by(.id, levelup_order, day) %>% filter(row_number() == n()) %>% select(-date_time) %>%
             dplyr::rename(levelup_data = sub("levelup_", "",i)) %>%
             group_by(.id, levelup_order) %>% mutate(levelup_data_cumsum = ifelse(row_number() == 1, first(levelup_data)-last(levelup_data), 0), levelup_data = first(na.omit(levelup_data))) %>% group_by(.id) %>% mutate(levelup_data_cumsum = cumsum(levelup_data_cumsum)) %>% as.data.frame()
@@ -2312,7 +2291,7 @@ observeEvent(input$Cleaner_Button_save,{
   assign(cleaning_meta_name, cleaner_mode_rect$cleaning_meta, envir = envir)
   showNotification(paste0("Saved as: ", cleaning_meta_name))
 })
-# new changes5----
+
 observeEvent(input$Cleaner_Button_levelup, {
   if (is.null(input$RadiusPlot_brush)) {
     NULL
@@ -2359,8 +2338,6 @@ observeEvent(input$Cleaner_Button_levelup, {
     if (!exists("df10")) {
       NULL
     } else {
-      # change7----
-      # if (isFALSE(input$fine_mode)){
       df10 = df10 %>%
         droplevels() %>%
         mutate(day = floor_date(date_time, "day")) %>%
@@ -2399,61 +2376,6 @@ observeEvent(input$Cleaner_Button_levelup, {
   }
 })
 
-# observeEvent(input$Cleaner_Button_levelup,{
-#   if(is.null(input$RadiusPlot_brush)){
-#     NULL
-#   }else{
-#     if(isFALSE(input$one_by_one_switch)){
-#       first_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
-#       last_brush = brushedPoints(isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,], input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
-#       if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
-#         NULL
-#       }else{
-#         df10 = isolate(d$a)[isolate(d$a)[[".id"]] %in% input$one_by_one_group_select,] %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
-#         }
-#       }else{
-#       first_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time)) %>% distinct(date_time) %>% as.data.frame()
-#       last_brush = brushedPoints(isolate(d$a), input$RadiusPlot_brush, xvar = "date_time") %>% filter(date_time == min_max(date_time, "max")) %>% distinct(date_time) %>% as.data.frame()
-#       if(nrow(first_brush) == 0 | nrow(last_brush) == 0){
-#         NULL
-#       }else{
-#         df10 = isolate(d$a) %>% filter(between(date_time, first_brush$date_time, last_brush$date_time))
-#       }
-#       }
-#     if(!exists("df10")){
-#       NULL
-#     } else {
-#       # change7----
-#       # if(isFALSE(input$fine_mode)){
-#       df10 = df10 %>% droplevels() %>% mutate(day = floor_date(date_time, "day")) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
-#         dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
-#       # }else{
-#       #   df10 = df10 %>% droplevels() %>% mutate(day = date_time) %>% select(.id, day, input$variable_prim) %>% rename_with(~sub(paste0(input$variable_prim), paste0("levelup_", input$variable_prim), .x),everything()) %>%
-#       #     dplyr::mutate(across(starts_with("levelup"), ~TRUE)) %>% distinct_all(.keep_all = T)
-#       # }
-#
-#       if("cleaning_meta" %in% ls(envir = envir) | !is.null(cleaner_mode_rect$cleaning_meta)){
-#         if(is.null(cleaner_mode_rect$cleaning_meta)){
-#           cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
-#           assign("cleaning_meta", df10, envir = envir)
-#           cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
-#           rm(df10)
-#         }else{
-#           cleaner_mode_rect$cleaning_meta = isolate(cleaner_mode_rect$cleaning_meta) %>% full_join(df10, by = c(".id", "day")) %>% dplyr::mutate(across(ends_with(".x"), ~ replace(., get(paste0("levelup_", input$variable_prim, ".y")) == TRUE, TRUE))) %>%
-#             dplyr::select(!ends_with(".y")) %>% dplyr::rename_all(~sub('.x', '', .x, fixed=T)) %>% mutate_if(is.logical, ~replace_na(., FALSE))
-#           assign("cleaning_meta", cleaner_mode_rect$cleaning_meta, envir = envir)
-#           cleaner_mode_rect$data_levelup =  cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
-#           rm(df10)
-#         }
-#       }else{
-#         cleaner_mode_rect$cleaning_meta = df10 %>% as.data.frame()
-#         assign("cleaning_meta", df10, envir = envir)
-#         cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_rect$cleaning_meta)
-#         rm(df10)
-#       }
-#     }
-#   }
-# })
 observeEvent(input$Cleaner_Button_levelup_detect,{
   showModal(modalDialog(
     title = "Detect jumps.",
@@ -3830,7 +3752,8 @@ observe({
         # numericInput("bar33", "Minimum temperature method1:", min = -10, max = 10, step = 1, value = 5),
         # numericInput("bar35", "Minimum temperature forced filtered method_lower_plot:", min = -10, max = 10, step = 1, value = -5),
         # numericInput("bar34", "Mean daily temperature with below zero temperature:",  min = -10, max = 10, step = 1, value = 5),
-        numericInput("freeze_temp_input", "Freeze temperature",  min = -10, max = 10, step = 0.1, value = 0),
+        numericInput("freeze_temp_input", "Freeze temp. threshold",  min = -10, max = 10, step = 0.1, value = 0),
+        numericInput("freeze_temp_mean_input", "Mean daily temp. threshold",  min = 0, max = 10, step = 0.1, value = 5),
         easyClose = TRUE,
         footer = tagList(
           modalButton("Cancel"),
@@ -3861,7 +3784,9 @@ observe({
               dplyr::rename(Variable_freeze_orig = input$variable_prim) %>%
               dplyr::mutate(GRO_orig = Variable_freeze_orig,
                             FREEZE = Variable_freeze_orig) %>%
-              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < input$freeze_temp_input) ~ NA, TRUE ~ GRO_orig)) %>%
+              group_by(.id, day_freeze) %>% mutate(GRO_orig = case_when(any(T1 < input$freeze_temp_input) ~ NA,
+                                                                        mean(T1, na.rm = T) < input$freeze_temp_mean_input ~ NA,
+                                                                        TRUE ~ GRO_orig)) %>%
               group_by(.id) %>% mutate(GRO_orig = zoo::na.approx(GRO_orig, na.rm = F)) %>%
               tidyr::fill(GRO_orig, .direction = "downup") %>%
               ungroup() %>%

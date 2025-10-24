@@ -1,5 +1,6 @@
 Package: PLOTeR
-Title: Web application for time series data visualization and processing.
+Title: Web application for time series data visualization and
+        processing.
 Version: 1.1.1
 Authors@R: 
     person("Roman", "Plichta", , "roman.plichta@mendelu.cz", role = c("aut", "cre"),
@@ -10,10 +11,23 @@ License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Depends: 
-    R (>= 2.10)
+Depends: R (>= 3.5.0)
 LazyData: true
-Suggests: 
-    shinytest2
 URL: https://github.com/romanplichta/PLOTeR
 BugReports: https://github.com/romanplichta/PLOTeR/issues
+RemoteType: github
+RemoteHost: api.github.com
+RemoteRepo: PLOTeR
+RemoteUsername: romanplichta
+RemoteRef: HEAD
+RemoteSha: 75cd9bbdafa0896dd38636972c4533ed61a6e6e6
+GithubRepo: PLOTeR
+GithubUsername: romanplichta
+GithubRef: HEAD
+GithubSHA1: 75cd9bbdafa0896dd38636972c4533ed61a6e6e6
+NeedsCompilation: no
+Packaged: 2025-10-24 07:58:04 UTC; plich
+Author: Roman Plichta [aut, cre] (ORCID:
+    <https://orcid.org/0000-0003-2442-8522>)
+Maintainer: Roman Plichta <roman.plichta@mendelu.cz>
+Built: R 4.5.1; ; 2025-10-24 07:58:04 UTC; windows
