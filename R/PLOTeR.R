@@ -4369,7 +4369,7 @@ observe({
               df$Moisture = ifelse(df$.id >= 93000000 | df$.id %in% c(90181123, 91181123), df$Moisture, NA)
               # Soil type calibration lines----
               # Soil type start
-              tms_calib_data = list('Loamy_Sand_A' = matrix(data = c(-1.90e-8, 2.66e-4, -1.54e-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_A"), c("a", "b", "c"))),
+              tms_calib_data = list('Loamy_Sand_A' = matrix(data = c(-1.90E-8, 2.66E-4, -1.54E-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_A"), c("a", "b", "c"))),
                                     'Loamy_Sand_B' = matrix(data = c(-2.30E-8, 2.82E-4, -1.67E-1), nrow = 1, ncol = 3, dimnames = list(c("Loamy_Sand_B"), c("a", "b", "c"))),
                                     'Sandy_Loam_A' = matrix(data = c(-3.80E-8, 3.39E-4, -2.15E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_A"), c("a", "b", "c"))),
                                     'Sandy_Loam_B' = matrix(data = c(-9.00E-10, 2.62E-4, -1.59E-1), nrow = 1, ncol = 3, dimnames = list(c("Sandy_Loam_B"), c("a", "b", "c"))),
@@ -4381,7 +4381,7 @@ observe({
                 # Moisture is not recalculated into volumetric soil moisture
                 showNotification(paste0("Raw TMS data were not recalculated."))
               }else{
-                df$Moisture = (tms_calib_data[[input$select_tms_calib]][1]*df$Moisture^2+tms_calib_data[[input$select_tms_calib]][1]*df$Moisture+tms_calib_data[[input$select_tms_calib]][1])*100
+                df$Moisture = (tms_calib_data[[input$select_tms_calib]][1]*df$Moisture^2+tms_calib_data[[input$select_tms_calib]][2]*df$Moisture+tms_calib_data[[input$select_tms_calib]][3])*100
                 showNotification(paste0("TMS volumetric soil moisture according to ", input$select_tms_calib))
                 }
               # Soil type end
