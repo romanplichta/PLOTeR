@@ -917,7 +917,7 @@ value = 0,
   if(isTRUE(input$GS_remove_freeze)){
     if("T1" %in% colnames(d$a)) {
       shiny::incProgress(2/10, detail = "Filtering freeze days")
-     data_fit = d$a %>% dplyr::mutate(day_freeze = lubridate:: floor_date(date_time, "day")) %>%
+     data_fit = d$a %>% dplyr::mutate(day_freeze = lubridate::floor_date(date_time, "day")) %>%
         dplyr::mutate(Variable_freeze_orig = !!rlang::sym(input$variable_prim)) %>%
         dplyr::mutate(Variable_freeze = !!rlang::sym(input$variable_prim)) %>%
         group_by(.id, day_freeze) %>% mutate(Variable_freeze = dplyr::case_when(any(T1 < input$freeze_temp_input_GS) ~ NA,
@@ -3780,7 +3780,7 @@ observe({
         {
           if("T1" %in% colnames(d$a)) {
             shiny::incProgress(2/10, detail = "Filtering freeze days")
-            df6 = isolate(d$a) %>% dplyr::mutate(day_freeze = lubridate:: floor_date(date_time, "day")) %>%
+            df6 = isolate(d$a) %>% dplyr::mutate(day_freeze = lubridate::floor_date(date_time, "day")) %>%
               dplyr::rename(Variable_freeze_orig = input$variable_prim) %>%
               dplyr::mutate(GRO_orig = Variable_freeze_orig,
                             FREEZE = Variable_freeze_orig) %>%

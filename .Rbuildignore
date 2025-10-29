@@ -3,3 +3,4 @@
 ^app\.R$
 ^LICENSE\.md$
 _\.new\.png$
+^docu$
