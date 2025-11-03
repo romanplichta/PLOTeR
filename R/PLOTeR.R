@@ -340,142 +340,158 @@ PLOTeR = function (){
                                fluidRow(align = "center",
                                         uiOutput(outputId = 'dynamicInput_cleaner'))
                              ),
-                               # fluidRow(column(
-                               #   12,
-                                 # conditionalPanel(
-                                 #   condition = "input.cleaner_mode_switch == true",
-                                 #   column(
-                                 #     3,
-                                 #     selectInput(
-                                 #       "quantile_correct_input",
-                                 #       "Method",
-                                 #       c("Quantiles", "Z-score"),
-                                 #       selected = "Quantiles"
-                                 #     ),
-                                 #     selectInput(
-                                 #       "compare_within",
-                                 #       "Compare within",
-                                 #       c(
-                                 #         "within days and across ids",
-                                 #         "within ids and across days",
-                                 #         "across days and ids"
-                                 #       ),
-                                 #       selected = "within days and across ids"
-                                 #     )
-                                 #   ),
-                                 #   column(
-                                 #     3,
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "compare_to_selected",
-                                 #       "Compare to selected",
-                                 #       value = F,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "ampl_switch",
-                                 #       "Check amplitude",
-                                 #       value = T,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "mean_switch",
-                                 #       "Check mean",
-                                 #       value = F,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "rollingwindow_switch",
-                                 #       "Remove isolated days",
-                                 #       value = F,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "cleaner_levelup_switch",
-                                 #       "Level-up",
-                                 #       value = F,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     shinyWidgets::materialSwitch(
-                                 #       "accept_nas2_switch",
-                                 #       "Across NAs",
-                                 #       value = F,
-                                 #       status = "info",
-                                 #       width = "50%"
-                                 #     ),
-                                 #     conditionalPanel(condition = "cleaner_levelup_switch == TRUE",
-                                 #                      column(
-                                 #                        12,
-                                 #                        numericInput(
-                                 #                          "cleaner_levelup_threshold",
-                                 #                          "Level over:", value = 1000, min = 100, max = 9000, step = 100
-                                 #                        )
-                                 #                      )),
-                                 #     conditionalPanel(condition = "rollingwindow_switch == TRUE",
-                                 #                      column(
-                                 #                        12,
-                                 #                        numericInput(
-                                 #                          "roll_window",
-                                 #                          "Remove isolated days:", value = 3, min = 1, max = 100, step = 1
-                                 #                        )
-                                 #                      )),
-                                 #   ),
-                                 #   column(
-                                 #     3,
-                                 #     conditionalPanel(condition = "input.quantile_correct_input == 'Quantiles'",
-                                 #                      column(
-                                 #                        12,
-                                 #                        numericInput(
-                                 #                          "quantile_upper_threshold",
-                                 #                          "quantile upper",
-                                 #                          value = .95,
-                                 #                          min = .5,
-                                 #                          max = 1,
-                                 #                          step = .01
-                                 #                        ),
-                                 #                        numericInput(
-                                 #                          "quantile_lower_threshold",
-                                 #                          "quantile lower",
-                                 #                          value = .05,
-                                 #                          min = 0,
-                                 #                          max = .5,
-                                 #                          step = .01
-                                 #                        )
-                                 #                      )),
-                                 #     conditionalPanel(condition = "input.quantile_correct_input == 'Z-score'",
-                                 #                      column(
-                                 #                        12,
-                                 #                        numericInput(
-                                 #                          "z_score_threshold",
-                                 #                          "z score",
-                                 #                          value = 3,
-                                 #                          min = 0,
-                                 #                          max = 5,
-                                 #                          step = .5
-                                 #                        )
-                                 #                      )),
-                                 #     numericInput(
-                                 #       "remove_all_threshold",
-                                 #       "delete all if missing more than (%)",
-                                 #       value = 75,
-                                 #       min = 5,
-                                 #       max = 100,
-                                 #       step = 1
-                                 #     )
-                                 #   ),
-                                 #   column(2,
-                                 #          actionButton(inputId = "cleaner_recalculate_btn", label = "Recalcuate", width = "50%"),
-                                 #          actionButton(inputId = "cleaner_add_btn", label = "Add", width = "50%"),
-                                 #          actionButton(inputId = "cleaner_refresh_btn", label = "Refresh", width = "50%"),
-                                 #          actionButton(inputId = "cleaner_upload_btn", label = "Upload", width = "50%")
-                                 #   )
-                                 # )
-                               # )
-                               # ),
+                             #change_start----
+                               fluidRow(column(
+                                 12,
+                               conditionalPanel(
+                                 condition = "input.cleaner_mode_switch == true",
+                                 column(
+                                   3,
+                                   selectInput(
+                                     "cleaner_mode_reso_input",
+                                     "Time reso:",
+                                     c("daily", "orig"),
+                                     selected = "day"
+                                   ),
+                                   selectInput(
+                                     "quantile_correct_input",
+                                     "Method",
+                                     c("Quantiles", "Z-score"),
+                                     selected = "Quantiles"
+                                   ),
+                                   selectInput(
+                                     "compare_within",
+                                     "Compare within",
+                                     c(
+                                       "within days and across ids",
+                                       "within ids and across days",
+                                       "across days and ids"
+                                     ),
+                                     selected = "within days and across ids"
+                                   ),
+                                   selectInput(
+                                     "cleaner_mode_group_add",
+                                     "Group by:",
+                                     choices = NULL,
+                                     selected = NULL,
+                                     multiple = T
+                                   )
+                                 ),
+                                 column(
+                                   3,
+                                   shinyWidgets::materialSwitch(
+                                     "compare_to_selected",
+                                     "Compare to selected",
+                                     value = F,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   shinyWidgets::materialSwitch(
+                                     "ampl_switch",
+                                     "Check amplitude",
+                                     value = T,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   shinyWidgets::materialSwitch(
+                                     "mean_switch",
+                                     "Check mean",
+                                     value = F,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   shinyWidgets::materialSwitch(
+                                     "rollingwindow_switch",
+                                     "Remove isolated days",
+                                     value = F,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   shinyWidgets::materialSwitch(
+                                     "cleaner_levelup_switch",
+                                     "Level-up",
+                                     value = F,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   shinyWidgets::materialSwitch(
+                                     "accept_nas2_switch",
+                                     "Across NAs",
+                                     value = F,
+                                     status = "info",
+                                     width = "50%"
+                                   ),
+                                   conditionalPanel(condition = "cleaner_levelup_switch == TRUE",
+                                                    column(
+                                                      12,
+                                                      numericInput(
+                                                        "cleaner_levelup_threshold",
+                                                        "Level over:", value = 1000, min = 100, max = 9000, step = 100
+                                                      )
+                                                    )),
+                                   conditionalPanel(condition = "rollingwindow_switch == TRUE",
+                                                    column(
+                                                      12,
+                                                      numericInput(
+                                                        "roll_window",
+                                                        "Remove isolated days:", value = 3, min = 1, max = 100, step = 1
+                                                      )
+                                                    )),
+                                 ),
+                                 column(
+                                   3,
+                                   conditionalPanel(condition = "input.quantile_correct_input == 'Quantiles'",
+                                                    column(
+                                                      12,
+                                                      numericInput(
+                                                        "quantile_upper_threshold",
+                                                        "quantile upper",
+                                                        value = .95,
+                                                        min = .5,
+                                                        max = 1,
+                                                        step = .01
+                                                      ),
+                                                      numericInput(
+                                                        "quantile_lower_threshold",
+                                                        "quantile lower",
+                                                        value = .05,
+                                                        min = 0,
+                                                        max = .5,
+                                                        step = .01
+                                                      )
+                                                    )),
+                                   conditionalPanel(condition = "input.quantile_correct_input == 'Z-score'",
+                                                    column(
+                                                      12,
+                                                      numericInput(
+                                                        "z_score_threshold",
+                                                        "z score",
+                                                        value = 3,
+                                                        min = 0,
+                                                        max = 5,
+                                                        step = .5
+                                                      )
+                                                    )),
+                                   numericInput(
+                                     "remove_all_threshold",
+                                     "delete all if missing more than (%)",
+                                     value = 75,
+                                     min = 5,
+                                     max = 100,
+                                     step = 1
+                                   )
+                                 ),
+                                 column(2,
+                                        actionButton(inputId = "cleaner_recalculate_btn", label = "Recalcuate", width = "50%")
+                                        # ,
+                                        # actionButton(inputId = "cleaner_add_btn", label = "Add", width = "50%"),
+                                        # actionButton(inputId = "cleaner_refresh_btn", label = "Refresh", width = "50%"),
+                                        # actionButton(inputId = "cleaner_upload_btn", label = "Upload", width = "50%")
+                                 )
+                               )
+                               )
+                               ),
+                             #change_end----
                                fluidRow(align = "center",
                                         uiOutput(outputId = 'dynamicInput_GS')),
                              fluidRow(
@@ -1878,18 +1894,42 @@ value = 0,
           panel.grid = element_blank())
         }}
     }
+    # detailed cleaner mode----
+    # change start----
+    fct <- function(x){
+      req(d$a)
+      d$a %>% droplevels() %>% select(where(is.factor)) %>% colnames()
+    }
+    observe({
+      updateSelectInput(session, "cleaner_mode_group_add",
+                        choices = fct(),
+                        selected = NULL)
+    })
+    # change_end----
     ampl <- function(x){
       min_max(x,method = "max")-min_max(x, method = "min")
     }
     cleaner_mean = function(x,na.rm = T, inf_fix = NA){
       if(length(x)>0 & !all(is.na(x))) mean(x, na.rm = na.rm) else inf_fix
     }
-    upper <- function(x, probs  = input$quantile_upper_threshold, na.rm = T){
-      as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+    # change start----
+    # upper <- function(x, probs  = input$quantile_upper_threshold, na.rm = T){
+    #   as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+    # }
+    # lower <- function(x, probs  = input$quantile_lower_threshold, na.rm = T){
+    #   as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+    # }
+    upper <- function(x, probs  = c(input$quantile_lower_threshold, input$quantile_upper_threshold), na.rm = T){
+      q = as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+      iqr = as.numeric(q[2]-q[1])
+      as.numeric(q[2])+1.5*iqr
     }
-    lower <- function(x, probs  = input$quantile_lower_threshold, na.rm = T){
-      as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+    lower <- function(x, probs  = c(input$quantile_lower_threshold, input$quantile_upper_threshold), na.rm = T){
+      q = as.numeric(quantile(x, probs = probs, na.rm = na.rm))
+      iqr = as.numeric(q[2]-q[1])
+      as.numeric(q[1])-1.5*iqr
     }
+    # change stop----
     cleaner_groups = function(x){
       cumsum(c(TRUE, diff(x) != 1  & diff(x) != 0))
     }
@@ -1922,7 +1962,8 @@ value = 0,
         }else{
         return(NULL)
       }
-      }
+    }
+    #change_start----
     # cleaner_mode_calculator = function(){
     #   if(isTRUE(input$cleaner_mode_switch)){
     #     if(input$compare_within == "within days and across ids"){
@@ -1981,7 +2022,12 @@ value = 0,
     #         if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
     #         data_correct = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>%
     #           {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
-    #           group_by(across(data_correct_grouping)) %>% mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
+    #           group_by(across(data_correct_grouping)) %>%
+    #
+    #           mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
+    #           # mutate_if(is.numeric, list(upper = upper + 1.5 * (upper - lower), lower = lower- 1.5 * (upper - lower))) %>%
+    #
+    #
     #           rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% {if(isTRUE(input$compare_to_selected)) dplyr::select(.data =.,-ampl, -mean) %>% dplyr::left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>%
     #           {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(ampl>=ampl_lower & ampl<=ampl_upper, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
     #           {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(mean>=mean_lower & mean<=mean_upper & outliers == FALSE, FALSE, TRUE)) else .} %>%
@@ -2012,12 +2058,14 @@ value = 0,
     #       cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% full_join(cleaner_mode_data_levelup, by = c(".id", "day")) %>%
     #         mutate(across(starts_with(paste0("outliers_", input$variable_prim)), ~ replace(., get(paste0("levelup_", input$variable_prim)) == TRUE, FALSE))) %>%
     #         mutate_if(is.logical, ~tidyr::replace_na(., FALSE)) %>% as.data.frame()
+    #       cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
     #       assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
     #       cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
     #       cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
     #       cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_data_outliers)
     #       suppressWarnings(rm(cleaner_mode_data_outliers,cleaner_mode_data_levelup))
     #     }else{
+    #       cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
     #       assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
     #       cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
     #       cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
@@ -2028,6 +2076,172 @@ value = 0,
     #     NULL
     #   }
     # }
+    cleaner_mode_calculator = function(){
+      if(isTRUE(input$cleaner_mode_switch)){
+        if(input$compare_within == "within days and across ids"){
+          data_correct_grouping = c("day", input$cleaner_mode_group_add)
+        } else {if(input$compare_within == "within ids and across days"){
+          data_correct_grouping = c(".id", input$cleaner_mode_group_add)
+        } else {
+          data_correct_grouping = c(input$cleaner_mode_group_add)
+        }
+        }
+        if(isTRUE(input$compare_to_selected)){
+          if(isFALSE(input$one_by_one_switch)){
+            lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+            upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]) & isolate(d$a)[[".id"]] %in% input$one_by_one_group_select ,], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+          }else{
+            lower_day =  head(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+            upper_day  = tail(brushedPoints(isolate(d$a)[complete.cases(isolate(d$a)[,input$variable_prim]),], input$RadiusPlot_brush, xvar = "date_time"),1)["date_time"]
+          }
+        }
+        # level-up part
+        if(isTRUE(input$cleaner_levelup_switch)){
+          #week searching and data filter
+          if(isTRUE(input$accept_nas2_switch)){
+            cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = !!rlang::sym(input$variable_prim)) %>% tidyr::fill(!!rlang::sym(input$variable_prim), .direction = "downup")
+          }else{
+            cleaner_mode_data_levelup = isolate(d$a) %>% mutate(nas = 1)
+          }
+          #searching differences
+          cleaner_mode_data_levelup = cleaner_mode_data_levelup %>% dplyr::group_by(.id)%>%
+            dplyr::mutate(Index_level2 = !!rlang::sym(input$variable_prim)-lag(!!rlang::sym(input$variable_prim))) %>%
+            dplyr::mutate(Index_level2 = ifelse(abs(Index_level2) > input$cleaner_levelup_threshold | is.na(nas), TRUE, FALSE)) %>%
+            filter(Index_level2 == TRUE) %>%
+            # dplyr::rename_with(~paste0("levelup_",input$variable_prim), "outliers") %>%
+            plyr::rename(., c("Index_level2" = paste0("levelup_",input$variable_prim))) %>%
+            mutate(day = lubridate::floor_date(date_time, "day")) %>%
+            select(.id, day, paste0("levelup_",input$variable_prim))%>%
+            distinct(.keep_all = T) %>%
+            as.data.frame()
+        } else {
+          cleaner_mode_data_levelup = NULL
+        }
+        # outliers part
+        # all columns version
+        # cleaner_mode_columns = isolate(d$a) %>% select_if(is.numeric) %>% colnames()
+        # single variable version
+        # cleaner_mode_columns = isolate(d$a) %>% select(input$variable_prim) %>% colnames()
+        if(input$cleaner_mode_reso_input == "daily"){
+          # if(length(isolate(d$a) %>% select_if(is.numeric)) == 1) {
+          #   cleaner_mode_data_day = isolate(d$a) %>% select() %>% mutate(day = lubridate::floor_date(date_time, "day")) %>% group_by(across(any_of(c(".id" , "day", input$cleaner_mode_group_add)))) %>% summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% dplyr::rename_with(function(x){paste0(input$variable_prim,"_",x)},where(is.numeric)) %>% as.data.frame()
+          # } else {
+          cleaner_mode_data_day = isolate(d$a) %>% select(any_of(c(".id", "date_time", input$cleaner_mode_group_add, input$variable_prim))) %>% mutate(day = lubridate::floor_date(date_time, "day")) %>% group_by(across(any_of(c(".id" , "day", input$cleaner_mode_group_add)))) %>% dplyr::summarise_if(is.numeric,list(ampl = ampl, mean = cleaner_mean)) %>% as.data.frame()
+          # }
+        }else{
+          # mode for original values without any time aggregation----
+          # if(length(isolate(d$a) %>% select_if(is.numeric)) == 1) {
+          #   cleaner_mode_data_day = isolate(d$a) %>% dplyr::rename(day = date_time) %>% group_by(across(any_of(c(".id" , "day", input$cleaner_mode_group_add)))) %>% dplyr::rename_with(function(x){paste0(input$variable_prim,"_",x)},where(is.numeric)) %>% as.data.frame()
+          # } else {
+          cleaner_mode_data_day = isolate(d$a) %>% dplyr::rename(day = date_time) %>% select(any_of(c(".id", "day", input$cleaner_mode_group_add, input$variable_prim))) %>% as.data.frame()
+          # }
+        }
+        cleaner_mode_data_outliers = cleaner_mode_data_day %>% select(.id, day) %>% ungroup()
+        if(input$cleaner_mode_reso_input == "daily"){
+          if(input$quantile_correct_input == "Quantiles"){
+            for(i in input$variable_prim){
+              # quantiles
+              if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+              data_correct = cleaner_mode_data_day %>% droplevels() %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+                group_by(across(paste0(data_correct_grouping))) %>%
+                mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::select(.data =.,-ampl, -mean) %>% dplyr::left_join(data_day_orig, by  = c(".id", "day")) else .} %>%
+                group_by(.id, day) %>%
+                {if(isTRUE(input$ampl_switch)) mutate(.data = ., outliers = ifelse(ampl>=ampl_lower & ampl<=ampl_upper, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
+                {if(isTRUE(input$mean_switch)) mutate(.data = ., outliers = ifelse(mean>=mean_lower & mean<=mean_upper & outliers == FALSE, FALSE, TRUE)) else .} %>%
+                mutate(year = as.factor(lubridate::year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T | is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+                {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+                    mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+                ungroup() %>% select(outliers, day, .id) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+              cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
+            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
+            suppressWarnings(rm(data_correct, cleaner_mode_data_day, i,data_correct_grouping, data_day_orig))
+          }else{
+            for(i in input$variable_prim){
+              # z score
+              if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+              data_correct = cleaner_mode_data_day %>% droplevels() %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+                group_by(across(paste0(data_correct_grouping))) %>%
+                mutate_if(is.numeric, list(mean = mean, sd = sd), na.rm = T) %>%
+                {if(isTRUE(input$compare_to_selected)) select(.data =.,-ampl, -mean) %>% left_join(data_day_orig, by  = c(".id", "day")) else .} %>%
+                group_by(.id, day) %>%
+                {if(isTRUE(input$ampl_switch)) mutate(.data = ., score_ampl = abs(ampl-ampl_mean)/abs(ampl_sd)) %>% mutate(outliers = ifelse(score_ampl<=input$z_score_threshold, FALSE, TRUE)) else mutate(.data = ., outliers =  FALSE)} %>%
+                {if(isTRUE(input$mean_switch)) mutate(.data = ., score_mean = abs(mean-mean_mean)/abs(mean_sd)) %>% mutate(outliers = ifelse(score_mean<=input$z_score_threshold & outliers == FALSE, FALSE, TRUE)) else .} %>%
+                mutate(year = as.factor(lubridate::year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T| is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+                {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+                    mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+                ungroup() %>% select(outliers, .id, day) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+              cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>% as.data.frame()}
+            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
+            suppressWarnings(rm(data_correct, cleaner_mode_data_day, i, data_correct_grouping, data_day_orig))
+          }
+        }else{
+          # mode for original values without any time aggregation----
+          if(input$quantile_correct_input == "Quantiles"){
+            for(i in input$variable_prim){
+              # quantiles
+              if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+              data_correct = cleaner_mode_data_day %>% droplevels() %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+                group_by(across(paste0(data_correct_grouping))) %>%
+                mutate_if(is.numeric, list(upper = upper, lower = lower)) %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::select(.data =.,-ampl, -mean) %>% dplyr::left_join(data_day_orig, by  = c(".id", "day")) else .} %>% group_by(.id, day) %>%
+                mutate(outliers = ifelse(!!rlang::sym(input$variable_prim)>=lower & !!rlang::sym(input$variable_prim)<=upper, FALSE, TRUE)) %>%
+                mutate(year = as.factor(lubridate::year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T | is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+                {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+                    mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+                ungroup() %>% select(outliers, day, .id) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+              cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>%
+                dplyr::ungroup() %>% dplyr::mutate(day = lubridate::floor_date(day, "day")) %>% dplyr::group_by(.id, day) %>% mutate(across(starts_with("outliers"), ~ifelse(any(isTRUE(.)),TRUE,.))) %>%
+                dplyr::distinct(.keep_all = T) %>%
+                as.data.frame()}
+            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
+            suppressWarnings(rm(data_correct, cleaner_mode_data_day, i,data_correct_grouping, data_day_orig))
+          }else{
+            for(i in input$variable_prim){
+              # z score
+              if(isTRUE(input$compare_to_selected)){data_day_orig = cleaner_mode_data_day %>% droplevels() %>% select_at(dplyr::vars(tidyselect::contains(i),".id", "day")) %>% rename_with(~sub(paste0(i,"_"), "", .x),everything()) %>% as.data.frame()}
+              data_correct = cleaner_mode_data_day %>% droplevels() %>%
+                {if(isTRUE(input$compare_to_selected)) dplyr::mutate(.data = ., across(starts_with(i), ~ replace(., get("day") > upper_day | get("day") < lower_day, NA))) else .} %>%
+                group_by(across(paste0(data_correct_grouping))) %>% mutate_if(is.numeric, list(mean = mean, sd = sd), na.rm = T) %>%
+                {if(isTRUE(input$compare_to_selected)) select(.data =.,-ampl, -mean) %>% left_join(data_day_orig, by  = c(".id", "day")) else .} %>%
+                group_by(.id, day) %>%
+                mutate(score = abs(!!rlang::sym(input$variable_prim)-mean)/abs(sd)) %>% mutate(outliers = ifelse(score<=input$z_score_threshold, FALSE, TRUE)) %>%
+                mutate(year = as.factor(lubridate::year(day))) %>% group_by(.id, year) %>% mutate(T_ratio = (sum(outliers == T| is.na(outliers))/n())) %>% mutate(outliers = ifelse(is.na(outliers), FALSE, ifelse(T_ratio > input$remove_all_threshold*0.01 & !is.na(outliers), TRUE, outliers))) %>%
+                {if(isTRUE(input$rollingwindow_switch)) group_by(.data = .,.id) %>% mutate(roll_start = ifelse(zoo::rollsum(outliers,input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE), roll_end = rev(ifelse(zoo::rollsum(rev(outliers),input$roll_window, align = "left", fill = NA) > 0, TRUE, FALSE))) %>%
+                    mutate(outliers = if_else(roll_start == FALSE | roll_end == FALSE, FALSE, TRUE, missing = FALSE)) else .} %>%
+                ungroup() %>% select(outliers, .id, day) %>% dplyr::rename_with(~paste0("outliers_",i), "outliers")
+              cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% left_join(data_correct, by = c(".id", "day")) %>%
+                dplyr::mutate(day = lubridate::floor_date(day, "day")) %>% dplyr::group_by(.id, day) %>% mutate(across(starts_with("outliers"), ~ifelse(any(isTRUE(.)),TRUE,.))) %>%
+                dplyr::distinct(.keep_all = T) %>%
+                as.data.frame()}
+            cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% filter(if_any(where(is.logical), ~ . == TRUE))
+            suppressWarnings(rm(data_correct, cleaner_mode_data_day, i, data_correct_grouping, data_day_orig))
+          }
+        }
+        if(!is.null(cleaner_mode_data_levelup)){
+          cleaner_mode_data_outliers = cleaner_mode_data_outliers %>% full_join(cleaner_mode_data_levelup, by = c(".id", "day")) %>%
+            mutate(across(starts_with(paste0("outliers_", input$variable_prim)), ~ replace(., get(paste0("levelup_", input$variable_prim)) == TRUE, FALSE))) %>%
+            mutate_if(is.logical, ~tidyr::replace_na(., FALSE)) %>% as.data.frame()
+          assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
+          cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
+          cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
+          cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(cleaner_mode_data_outliers)
+          suppressWarnings(rm(cleaner_mode_data_outliers,cleaner_mode_data_levelup))
+        }else{
+          assign("cleaning_meta", cleaner_mode_data_outliers, envir = envir)
+          cleaner_mode_rect$cleaning_meta = cleaner_mode_data_outliers
+          cleaner_mode_rect$data = cleaner_mode_rect_fnct(cleaner_mode_data_outliers)
+          suppressWarnings(rm(cleaner_mode_data_outliers))
+        }
+
+      }else{
+        NULL
+      }
+    }
+    #change_end----
     observeEvent(input$cleaner_upload_btn,{
       cleaner_meta_choices = df_choices()
       cleaner_meta_choices = cleaner_meta_choices[startsWith(cleaner_meta_choices, "cleaning_meta")]
@@ -2062,6 +2276,7 @@ value = 0,
       cleaner_mode_rect$data_levelup = cleaner_mode_rect_fnct_levelup(get(input$input_cleaner_meta_choices))
       removeModal()
       })
+    # cleaner_mode_start----
     observeEvent(input$cleaner_recalculate_btn,{
       tryCatch({
         shiny::withProgress(
@@ -2079,6 +2294,7 @@ value = 0,
       }
       )
     },ignoreInit = T, ignoreNULL = T)
+    # cleaner_mode_end----
     observeEvent(input$cleaner_refresh_btn,{
       shiny::withProgress(message = paste0("Processing..."),
                           detail = "Refresing data",
