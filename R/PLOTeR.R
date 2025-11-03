@@ -2120,11 +2120,9 @@ value = 0,
                           shiny::incProgress(5/10, detail =  "Done")
                           })
     })
-
-
     plot_prim_cleaner_mode = function() {
-      rect_ids = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data )){NULL}else{cleaner_mode_rect$data %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
-      rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
+      rect_ids = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data )){NULL}else{cleaner_mode_rect$data %>% dplyr::select(.id) %>% filter(.id %in% unique(d$a$.id)) %>% dplyr::pull(.id) %>% unique()}}
+      rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% filter(.id %in% unique(d$a$.id)) %>% dplyr::pull(.id) %>% unique()}}
       rect_data = if(is.null(cleaner_mode_rect$data )){data.frame()}else{cleaner_mode_rect$data %>% filter(.id %in% rect_ids) %>% droplevels()}
       rect_data_levelup = if(is.null(cleaner_mode_rect$data_levelup )){data.frame()}else{cleaner_mode_rect$data_levelup %>% filter(.id %in% rect_ids_levelup) %>% droplevels()}
       plot_prim_cleaner_mode_data = plot_plot_data() %>% {
@@ -2148,7 +2146,7 @@ value = 0,
         {if(length(rect_ids)>0 & !is.null(rect_data) & nrow(rect_data)>0){geom_rect(data = rect_data, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id), colour = NA ,alpha = 0.3, show.legend = F)}}+
         {if(length(rect_ids_levelup)>0 & !is.null(rect_data_levelup) & nrow(rect_data_levelup)>0){geom_rect(data = rect_data_levelup, inherit.aes = F, aes(xmin = day_min, xmax = day_max + hours(23) + minutes(59), ymin = -Inf, ymax = Inf, fill = .id, colour = .id),alpha = 0.05, show.legend = F)}}+
         coord_cartesian(xlim = zooming$x,  ylim = zooming$y, expand = T)+
-              theme_bw()
+        theme_bw()
     }
     # Cleaner menu----
     output$dynamicInput_cleaner <- renderUI({
