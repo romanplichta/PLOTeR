@@ -2339,8 +2339,8 @@ value = 0,
 
 
     plot_prim_cleaner_mode = function() {
-      rect_ids = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data )){NULL}else{cleaner_mode_rect$data %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
-      rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% distinct(.id) %>% dplyr::pull(.id)}}
+      rect_ids = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data )){NULL}else{cleaner_mode_rect$data %>% dplyr::select(.id) %>% distinct(.id) %>% filter(.id %in% unique(d$a[".id"])) %>% dplyr::pull(.id)}}
+      rect_ids_levelup = if(isFALSE(input$one_by_one_switch)){input$one_by_one_group_select}else{if(is.null(cleaner_mode_rect$data_levelup)){NULL}else{cleaner_mode_rect$data_levelup %>% dplyr::select(.id) %>% distinct(.id) %>% filter(.id %in% unique(d$a[".id"])) %>% dplyr::pull(.id)}}
       rect_data = if(is.null(cleaner_mode_rect$data )){data.frame()}else{cleaner_mode_rect$data %>% filter(.id %in% rect_ids) %>% droplevels()}
       rect_data_levelup = if(is.null(cleaner_mode_rect$data_levelup )){data.frame()}else{cleaner_mode_rect$data_levelup %>% filter(.id %in% rect_ids_levelup) %>% droplevels()}
       plot_prim_cleaner_mode_data = plot_plot_data() %>% {
