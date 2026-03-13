@@ -1,7 +1,7 @@
 Package: PLOTeR
 Title: Web application for time series data visualization and
         processing.
-Version: 1.1.2
+Version: 1.1.2b
 Authors@R: 
     person("Roman", "Plichta", , "roman.plichta@mendelu.cz", role = c("aut", "cre"),
            comment = c(ORCID = "https://orcid.org/0000-0003-2442-8522"))
@@ -30,24 +30,6 @@ Packaged: 2025-10-24 07:58:04 UTC; plich
 Author: Roman Plichta [aut, cre] (ORCID:
     <https://orcid.org/0000-0003-2442-8522>)
 Maintainer: Roman Plichta <roman.plichta@mendelu.cz>
-Imports: 
-    cowplot,
-    dbscan,
-    dplyr,
-    DT,
-    ggplot2,
-    gridExtra,
-    lubridate,
-    plyr,
-    png,
-    readr,
-    reshape2,
-    rlang,
-    shiny,
-    shinyjqui,
-    shinyjs,
-    shinyTime,
-    shinyWidgets,
-    tibble,
-    tidyr,
-    zoo
+Imports: cowplot, dbscan, dplyr, DT, ggplot2, gridExtra, lubridate,
+        plyr, png, readr, reshape2, rlang, shiny, shinyjqui, shinyjs,
+        shinyTime, shinyWidgets, tibble, tidyr, zoo
