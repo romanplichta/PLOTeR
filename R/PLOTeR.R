@@ -70,7 +70,7 @@ PLOTeR = function (){
                          type="text/css", ".inline label{ display: table-cell; text-align: center; vertical-align: middle; }
                                    .inline .form-group { display: table-row;}")),
 
-    navbarPage(paste0("PLOTeR ", "1.1.2"), position = "fixed-top",
+    navbarPage(paste0("PLOTeR ", "1.1.2b"), position = "fixed-top",
                 id = "navbar",
                     #tabpanel_Data ----
                     tabPanel("Data",
@@ -87,7 +87,7 @@ PLOTeR = function (){
                                  column(12, shinyWidgets::materialSwitch("Auto_save_switch","Auto-save", status = "primary", value = F, width = "70%"))
                                )),
                              actionButton("df_uploader", "Upload data.frame", class = "btn-success",style = "height: 35px; margin-left: 10px;"),
-                             actionButton("tomst_uploader", "Upload Tomst", class = "btn-success",style = "height: 35px; margin-left: 10px;")
+                             # actionButton("tomst_uploader", "Upload Tomst", class = "btn-success",style = "height: 35px; margin-left: 10px;")
                              ),
                              fluidRow(plotOutput("Data_tab_plot"),
                                       align = "center", style = "margin-left: 20px; margin-right: 20px;"),
